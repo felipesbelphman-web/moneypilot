@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background-app: #f7f9f9;
+  --background-elevated: #ffffff;
+
+  --text-primary: #001219;
+  --text-secondary: #334749;
+  --text-tertiary: #6b7d7d;
+  --text-inverse: #ffffff;
+
+  --brand-primary: #005f73;
+  --brand-secondary: #0a9396;
+  --brand-soft: #94d2bd;
+  --brand-highlight: #e9d8a6;
+
+  --border-default: #dde5e5;
+  --border-strong: #94a5a5;
+
+  --positive-primary: #0a9396;
+  --danger-primary: #ae2012;
+
+  --chart-09: #001219;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background-app);
+  --color-foreground: var(--text-primary);
+
+  --font-sans: var(--font-inter);
+  --font-brand: var(--font-poppins);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background-app);
+  color: var(--text-primary);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+@keyframes moneyPilotCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.money-card-in {
+  opacity: 0;
+  animation: moneyPilotCardIn 700ms ease-out forwards;
 }
