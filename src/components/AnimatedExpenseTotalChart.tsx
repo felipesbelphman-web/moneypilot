@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
 
 const FINAL_VALUE = 2264;
 
@@ -11,6 +13,8 @@ type AnimatedExpenseTotalChartProps = {
 export default function AnimatedExpenseTotalChart({
   variant = "desktop",
 }: AnimatedExpenseTotalChartProps) {
+  const { language } = useLanguage();
+  const t = translations[language].landing.dashboard;
   const [progress, setProgress] = useState(0);
   const [value, setValue] = useState(0);
 
@@ -70,7 +74,7 @@ export default function AnimatedExpenseTotalChart({
       viewBox="0 0 156 156"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label={`Total de gastos: €${formattedValue}`}
+      aria-label={`${t.expenseTotalLabel}: €${formattedValue}`}
     >
       <defs>
         <mask id={maskId}>

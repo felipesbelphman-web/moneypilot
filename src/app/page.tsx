@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import MoneyPilotMobileHome from "@/components/MoneyPilotMobileHome";
@@ -13,26 +15,20 @@ import AnimatedBalanceIcon from "@/components/AnimatedBalanceIcon";
 import AnimatedExpenseTotalChart from "@/components/AnimatedExpenseTotalChart";
 import AnimatedExpenseCategories from "@/components/AnimatedExpenseCategories";
 import MobileScaleCanvas from "@/components/MobileScaleCanvas";
+import LanguageSelector from "@/components/LanguageSelector";
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
 
-const benefits = [
-  {
-    title: "Controle de gastos",
-    description: "Veja para onde seu dinheiro está indo.",
-    icon: "/moneypilot/icon-pie-chart.svg",
-  },
-  {
-    title: "Metas financeiras",
-    description: "Defina objetivos e acompanhe seu progresso.",
-    icon: "/moneypilot/icon-target.svg",
-  },
-  {
-    title: "Insights da IA",
-    description: "Receba análises inteligentes e recomendações.",
-    icon: "/moneypilot/icon-cpu.svg",
-  },
+const benefitIcons = [
+  "/moneypilot/icon-pie-chart.svg",
+  "/moneypilot/icon-target.svg",
+  "/moneypilot/icon-cpu.svg",
 ];
 
       export default function Home() {
+        const { language } = useLanguage();
+        const t = translations[language].landing;
+
         return (
           <main className="min-h-screen bg-white md:h-screen md:overflow-hidden">
             {/* Mobile */}
@@ -48,25 +44,28 @@ const benefits = [
 <div className="relative h-full w-[44.7917%] overflow-hidden">
   <div className="flex h-[865px] w-[860px] origin-top-left scale-[0.84] flex-col px-[72px] pb-[48px] pt-[64px]">
 
-    <Image
-      src="/moneypilot/moneypilot-logo.svg"
-      alt="MoneyPilot"
-      width={232}
-      height={48}
-      priority
-    />
+    <div className="flex w-full items-center justify-between">
+  <Image
+    src="/moneypilot/moneypilot-logo.svg"
+    alt="MoneyPilot"
+    width={232}
+    height={48}
+    priority
+  />
+
+  <LanguageSelector />
+</div>
 
           <h1 className="mt-7 max-w-[700px] text-[48px] font-semibold leading-[62px] tracking-[-0.96px] text-[var(--text-primary)]">
-            Entenda seu dinheiro.
+            {t.hero.titleLine1}
             <br />
-            Planeje seus objetivos.
+            {t.hero.titleLine2}
             <br />
-            Tome decisões melhores.
+            {t.hero.titleLine3}
           </h1>
 
           <p className="mt-7 max-w-[680px] text-[18px] font-medium leading-6 text-[var(--text-secondary)]">
-            Organize gastos, acompanhe orçamentos, receba insights da IA e
-            avance rumo aos seus objetivos financeiros.
+            {t.hero.description}
           </p>
 
           {/* Accent */}
@@ -89,14 +88,14 @@ const benefits = [
                   height={24}
                 />
 
-                Criar conta
+                {t.hero.createAccount}
               </Link>
 
               <Link
                 href="/auth?mode=login"
                 className="flex h-[56px] w-[300px] shrink-0 items-center justify-center gap-[10px] rounded-[8px] border border-[var(--brand-primary)] bg-white text-[14px] font-medium text-[var(--brand-primary)] transition-colors hover:bg-[#eef6f6]"
               >
-                Entrar
+                {t.hero.login}
 
                 <Image
                   src="/moneypilot/icon-login.svg"
@@ -111,18 +110,18 @@ const benefits = [
             href="/auth?mode=login"
             className="mt-7 w-fit text-xs font-medium text-[var(--brand-primary)] hover:underline"
           >
-              Já tem uma conta? Entrar
+              {t.hero.alreadyHaveAccount} {t.hero.login}
           </Link>
 
           {/* Benefícios */}
           <div className="mt-7 grid w-full max-w-[716px] grid-cols-3 gap-[14px]">
-            {benefits.map((benefit) => (
+            {t.benefits.map((benefit, index) => (
               <article
                 key={benefit.title}
                 className="h-[132px] rounded-2xl border border-[var(--brand-primary)] bg-[var(--background-elevated)] px-[14px] py-4 shadow-[0_1px_2px_rgba(0,18,25,0.05)]"
               >
                 <Image
-                  src={benefit.icon}
+                  src={benefitIcons[index]}
                   alt=""
                   width={24}
                   height={24}
@@ -149,7 +148,7 @@ const benefits = [
             />
 
             <p className="text-xs font-medium leading-[17px] text-[var(--text-secondary)]">
-              Seus dados são tratados com segurança e privacidade.
+              {t.security}
             </p>
             </div>
           </div>
@@ -159,7 +158,7 @@ const benefits = [
         <div className="relative h-full w-[55.2083%] overflow-hidden bg-[var(--brand-primary)]">
   <Image
   src="/moneypilot/welcome-right-bg.png"
-  alt="Visual do MoneyPilot"
+  alt={t.dashboard.visualAlt}
   fill
   priority
   className="object-cover"
@@ -171,29 +170,18 @@ const benefits = [
   {/* Card: Visão geral */}
   <article className="money-card-in relative h-[175px] w-[359px] overflow-hidden rounded-[18px] bg-white">
     <h2 className="absolute left-[18px] top-[22px] text-[13px] font-semibold text-[#161616]">
-      Visão geral
+      {t.dashboard.overview}
     </h2>
 
     <span className="absolute right-[18px] top-[23px] text-[11px] font-semibold text-[#161616]">
-      Diário
+      {t.dashboard.daily}
     </span>
 
     <AnimatedOverviewChart />
 
     {/* Meses */}
     <div className="absolute bottom-[21px] left-[18px] flex w-[322px] justify-between text-[7px] font-bold text-black/90">
-      <span>JAN</span>
-      <span>FEB</span>
-      <span>MAR</span>
-      <span>APR</span>
-      <span>MAY</span>
-      <span>JUN</span>
-      <span>JUL</span>
-      <span>AUG</span>
-      <span>SEP</span>
-      <span>OCT</span>
-      <span>NOV</span>
-      <span>DEC</span>
+      {t.dashboard.months.map((month) => <span key={month}>{month}</span>)}
     </div>
   </article>
       {/* Card: Receitas */}
@@ -208,7 +196,7 @@ const benefits = [
     <AnimatedIncomeValues />
 
     <p className="absolute left-[16px] top-[141px] text-[12px] font-medium leading-[14px] text-white">
-      Receitas
+      {t.dashboard.income}
     </p>
 
   </article>
@@ -218,7 +206,7 @@ const benefits = [
 
     {/* Título */}
     <p className="absolute left-[12px] top-[18px] flex h-[32px] items-center text-[14px] font-medium text-white">
-      Despesas
+      {t.dashboard.expenses}
     </p>
 
     {/* Ícone */}
@@ -237,7 +225,7 @@ const benefits = [
                 <AnimatedGoalIcon />
 
                 <p className="text-[12px] font-medium text-white">
-                  Meta: Viajar
+                  {t.dashboard.goal}
                 </p>
               </div>
 
@@ -255,7 +243,7 @@ const benefits = [
                   />
 
                   <p className="text-[12px] font-medium text-white">
-                    Prazo: 15 Nov 2027
+                    {t.dashboard.deadline}
                   </p>
                 </div>
 
@@ -272,7 +260,7 @@ const benefits = [
 
               {/* Título */}
               <p className="absolute bottom-[18px] left-[14px] text-[11px] font-medium text-[#161616]/50">
-                Saldo líquido
+                {t.dashboard.netBalance}
               </p>
 
             </article>
@@ -282,13 +270,13 @@ const benefits = [
                 {/* Tag */}
                 <div className="absolute left-[24px] top-[24px] rounded-full bg-[#ffeee8] px-[7px] py-[2px]">
                   <span className="text-[10px] font-semibold text-[#fa531c]">
-                    GASTOS
+                    {t.dashboard.spendingTag}
                   </span>
                 </div>
 
                 {/* Título */}
                 <h2 className="absolute left-[236px] top-[26px] text-[13px] font-medium text-white">
-                  Gastos por categoria
+                  {t.dashboard.spendingByCategory}
                 </h2>
                 {/* Gráfico total de gastos */}
                 <div className="absolute left-[24px] top-[62px] h-[156px] w-[156px]">

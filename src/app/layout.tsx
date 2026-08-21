@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Inter, Poppins } from "next/font/google";
+
+import { LanguageProvider } from "@/components/LanguageProvider";
+
 import "./globals.css";
 
 const inter = Inter({
@@ -22,16 +25,18 @@ const bebasNeue = Bebas_Neue({
 export const metadata: Metadata = {
   title: "MoneyPilot",
   description:
-    "Organize suas finanças, acompanhe seus objetivos e tome decisões melhores.",
+    "Understand your money, plan your goals and make better financial decisions.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="pt-BR"
+      lang="en"
       className={`${inter.variable} ${poppins.variable} ${bebasNeue.variable} antialiased`}
     >
-      <body>{children}</body>
+      <body>
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

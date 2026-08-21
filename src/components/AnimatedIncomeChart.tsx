@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
 
 const points = [
   { cx: 3.29311, cy: 64.7645 },
@@ -16,6 +18,8 @@ const points = [
 ];
 
 export default function AnimatedIncomeChart() {
+  const { language } = useLanguage();
+  const t = translations[language].landing.dashboard;
   const [isAnimated, setIsAnimated] = useState(false);
 
   useEffect(() => {
@@ -45,7 +49,7 @@ export default function AnimatedIncomeChart() {
       viewBox="0 0 191 69"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Gráfico de receitas"
+      aria-label={t.incomeChartLabel}
     >
       {/* Linha principal */}
       <path

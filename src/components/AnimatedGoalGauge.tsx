@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
 
 const FINAL_PROGRESS = 37;
 
@@ -34,6 +36,8 @@ type AnimatedGoalGaugeProps = {
 export default function AnimatedGoalGauge({
   variant = "desktop",
 }: AnimatedGoalGaugeProps) {
+  const { language } = useLanguage();
+  const t = translations[language].landing.dashboard;
   const [progress, setProgress] = useState(0);
 
   const isMobile = variant === "mobile";
@@ -80,7 +84,7 @@ export default function AnimatedGoalGauge({
       viewBox="0 0 82 81"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label={`Progresso da meta: ${Math.round(progress)}%`}
+      aria-label={`${t.goalProgressLabel}: ${Math.round(progress)}%`}
     >
       {rings.map((ring) => {
         const circumference = 2 * Math.PI * ring.radius;

@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import AnimatedOverviewChart from "@/components/AnimatedOverviewChart";
@@ -11,52 +13,49 @@ import AnimatedBalanceIcon from "@/components/AnimatedBalanceIcon";
 import AnimatedBalanceValues from "@/components/AnimatedBalanceValues";
 import AnimatedExpenseTotalChart from "@/components/AnimatedExpenseTotalChart";
 import AnimatedExpenseCategories from "@/components/AnimatedExpenseCategories";
+import LanguageSelector from "@/components/LanguageSelector";
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
 
-const benefits = [
-  {
-    title: "Controle de gastos",
-    description: "Veja para onde seu dinheiro está indo.",
-    icon: "/moneypilot/icon-pie-chart.svg",
-  },
-  {
-    title: "Metas financeiras",
-    description: "Defina objetivos e acompanhe seu progresso.",
-    icon: "/moneypilot/icon-target.svg",
-  },
-  {
-    title: "Insights da IA",
-    description: "Receba análises inteligentes e recomendações.",
-    icon: "/moneypilot/icon-cpu.svg",
-  },
+const benefitIcons = [
+  "/moneypilot/icon-pie-chart.svg",
+  "/moneypilot/icon-target.svg",
+  "/moneypilot/icon-cpu.svg",
 ];
 
 export default function MoneyPilotMobileHome() {
+  const { language } = useLanguage();
+  const t = translations[language].landing;
+
   return (
     <div className="mx-auto w-full max-w-[440px] bg-white">
       {/* Hero */}
       <section className="flex flex-col gap-6 px-6 py-12">
-        {/* Logo */}
-        <Image
-          src="/moneypilot/moneypilot-logo.svg"
-          alt="MoneyPilot"
-          width={232}
-          height={48}
-          priority
-        />
+        {/* Logo + idioma */}
+        <div className="flex w-full items-center justify-between">
+          <Image
+            src="/moneypilot/moneypilot-logo.svg"
+            alt="MoneyPilot"
+            width={232}
+            height={48}
+            priority
+          />
+
+          <LanguageSelector />
+        </div>
 
         {/* Título */}
         <h1 className="text-[28px] font-semibold leading-normal tracking-[-0.56px] text-[var(--text-primary)]">
-          Entenda seu dinheiro.
+          {t.hero.titleLine1}
           <br />
-          Planeje seus objetivos.
+          {t.hero.titleLine2}
           <br />
-          Tome decisões melhores.
+          {t.hero.titleLine3}
         </h1>
 
         {/* Descrição */}
         <p className="text-[18px] font-medium leading-6 text-[var(--text-secondary)]">
-          Organize gastos, acompanhe orçamentos, receba insights da IA e avance
-          rumo aos seus objetivos financeiros.
+          {t.hero.description}
         </p>
 
         {/* Barras decorativas */}
@@ -79,14 +78,14 @@ export default function MoneyPilotMobileHome() {
               height={24}
             />
 
-            Criar conta
+            {t.hero.createAccount}
           </Link>
 
           <Link
             href="/auth?mode=login"
             className="flex h-14 items-center justify-center gap-[10px] rounded-lg border border-[var(--brand-primary)] bg-white text-[14px] font-medium text-[var(--brand-primary)] transition-colors hover:bg-[#eef6f6]"
           >
-            Entrar
+            {t.hero.login}
 
             <Image
               src="/moneypilot/icon-login.svg"
@@ -102,19 +101,19 @@ export default function MoneyPilotMobileHome() {
           href="/auth?mode=login"
           className="w-fit text-[12px] font-medium leading-[17px] text-[var(--brand-primary)] hover:underline"
         >
-          Já tem uma conta? Entrar
+          {t.hero.alreadyHaveAccount} {t.hero.login}
         </Link>
 
         {/* Benefícios */}
         <div className="flex flex-col gap-4">
-          {benefits.map((benefit) => (
+          {t.benefits.map((benefit, index) => (
             <article
               key={benefit.title}
               className="flex h-[96px] flex-col gap-2 rounded-[22px] border border-[var(--brand-primary)] bg-white px-[14px] py-4 shadow-[0_1px_2px_rgba(0,18,25,0.05)]"
             >
               <div className="flex items-center gap-2">
                 <Image
-                  src={benefit.icon}
+                  src={benefitIcons[index]}
                   alt=""
                   width={24}
                   height={24}
@@ -142,7 +141,7 @@ export default function MoneyPilotMobileHome() {
           />
 
           <p className="text-[12px] font-medium leading-[17px] text-[var(--text-secondary)]">
-            Seus dados são tratados com segurança e privacidade.
+            {t.security}
           </p>
         </div>
         </section>
@@ -153,11 +152,11 @@ export default function MoneyPilotMobileHome() {
           <article className="relative h-[191px] w-full overflow-hidden rounded-[22px] bg-[#f7f9f9]">
             {/* Título */}
             <h2 className="absolute left-[18px] top-[22px] text-[16px] font-medium leading-[22px] text-[#161616]">
-              Visão geral
+              {t.dashboard.overview}
             </h2>
             {/* Período */}
             <span className="absolute right-[18px] top-[23px] text-[12px] font-medium leading-[17px] text-[#161616]">
-              Diário
+              {t.dashboard.daily}
             </span>
 
             {/* Gráfico animado */}
@@ -165,18 +164,7 @@ export default function MoneyPilotMobileHome() {
 
             {/* Meses */}
             <div className="absolute bottom-[21px] left-[18px] right-[18px] flex items-center justify-between text-center text-[10px] font-bold text-black/90">
-              <span>JAN</span>
-              <span>FEV</span>
-              <span>MAR</span>
-              <span>ABR</span>
-              <span>MAI</span>
-              <span>JUN</span>
-              <span>JUL</span>
-              <span>AGO</span>
-              <span>SET</span>
-              <span>OUT</span>
-              <span>NOV</span>
-              <span>DEZ</span>
+              {t.dashboard.months.map((month) => <span key={month}>{month}</span>)}
             </div>
           </article>
         </div>
@@ -195,14 +183,14 @@ export default function MoneyPilotMobileHome() {
 
             {/* Label */}
             <p className="absolute bottom-[22px] left-[14px] text-[13px] font-medium leading-[15px] text-white">
-              Receitas
+              {t.dashboard.income}
             </p>
           </article>
           {/* Card Despesas */}
             <article className="relative h-[184px] w-[184px] overflow-hidden rounded-[22px] bg-[#9b2226]">
             {/* Título */}
             <p className="absolute left-[14px] top-[26px] text-[15.44px] font-medium leading-normal text-white">
-                Despesas
+                {t.dashboard.expenses}
             </p>
 
             {/* Ícone */}
@@ -223,7 +211,7 @@ export default function MoneyPilotMobileHome() {
       <AnimatedGoalIcon />
 
       <p className="text-[12px] font-medium leading-normal text-white">
-        Meta: Viajar
+        {t.dashboard.goal}
       </p>
     </div>
 
@@ -242,7 +230,7 @@ export default function MoneyPilotMobileHome() {
       />
 
       <p className="whitespace-nowrap text-[12px] font-medium text-white">
-        Prazo: 15 Nov 2027
+        {t.dashboard.deadline}
       </p>
     </div>
   </article>
@@ -260,7 +248,7 @@ export default function MoneyPilotMobileHome() {
 
   {/* Label */}
   <p className="absolute left-[14px] top-[146px] text-[11px] font-medium leading-[13px] text-[#161616]/50">
-    Saldo líquido
+    {t.dashboard.netBalance}
   </p>
 </article>
 </div>
@@ -277,7 +265,7 @@ export default function MoneyPilotMobileHome() {
             {/* Categorias */}
             <div className="flex w-[205px] flex-col">
             <h2 className="mb-[5px] text-[16px] font-medium leading-normal text-white">
-                Gastos por categoria
+                {t.dashboard.spendingByCategory}
             </h2>
 
             <AnimatedExpenseCategories variant="mobile" />
@@ -290,7 +278,7 @@ export default function MoneyPilotMobileHome() {
   {/* Foto de fundo */}
   <Image
     src="/moneypilot/cta-final-bg.png"
-    alt="Planeje seu futuro financeiro com a MoneyPilot"
+    alt={t.dashboard.visualAlt}
     fill
     className="object-cover"
     sizes="440px"
@@ -313,13 +301,12 @@ export default function MoneyPilotMobileHome() {
 
       {/* Headline */}
       <h2 className="text-[30px] font-semibold leading-[34px] tracking-[-0.6px] text-white">
-        Comece hoje a cuidar melhor do seu futuro financeiro.
+        {t.finalCta.title}
       </h2>
 
       {/* Texto */}
       <p className="text-[16px] font-medium leading-5 text-white">
-        Organize gastos, acompanhe metas e avance com mais clareza e segurança
-        com a MoneyPilot.
+        {t.finalCta.description}
       </p>
 
       {/* Ações */}
@@ -335,7 +322,7 @@ export default function MoneyPilotMobileHome() {
             height={24}
           />
 
-          Criar conta grátis
+          {t.finalCta.createAccount}
         </Link>
 
         <Link
@@ -343,8 +330,8 @@ export default function MoneyPilotMobileHome() {
           className="flex h-14 w-full items-center justify-center gap-[10px] text-[14px] font-medium text-white"
         >
           <span>
-            Já tem uma conta?{" "}
-            <strong className="font-semibold">Entrar</strong>
+            {t.finalCta.alreadyHaveAccount}{" "}
+            <strong className="font-semibold">{t.finalCta.login}</strong>
           </span>
 
           <Image

@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-const categories = [
-  { name: "Moradia", value: "55%" },
-  { name: "Alimentação", value: "25%" },
-  { name: "Transporte", value: "15%" },
-  { name: "Lazer", value: "10%" },
-  { name: "Saúde", value: "8%" },
-];
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
 
 type AnimatedExpenseCategoriesProps = {
   variant?: "desktop" | "mobile";
@@ -17,6 +12,19 @@ type AnimatedExpenseCategoriesProps = {
 export default function AnimatedExpenseCategories({
   variant = "desktop",
 }: AnimatedExpenseCategoriesProps) {
+  const { language } = useLanguage();
+
+  const categoryTranslations =
+    translations[language].landing.dashboard.categories;
+
+  const categories = [
+    { name: categoryTranslations.housing, value: "55%" },
+    { name: categoryTranslations.food, value: "25%" },
+    { name: categoryTranslations.transport, value: "15%" },
+    { name: categoryTranslations.leisure, value: "10%" },
+    { name: categoryTranslations.health, value: "8%" },
+  ];
+
   const [isAnimated, setIsAnimated] = useState(false);
 
   const isMobile = variant === "mobile";
@@ -27,12 +35,12 @@ export default function AnimatedExpenseCategories({
     ).matches;
 
     if (prefersReducedMotion) {
-  const frame = requestAnimationFrame(() => {
-    setIsAnimated(true);
-  });
+      const frame = requestAnimationFrame(() => {
+        setIsAnimated(true);
+      });
 
-  return () => cancelAnimationFrame(frame);
-}
+      return () => cancelAnimationFrame(frame);
+    }
 
     const timer = window.setTimeout(() => {
       setIsAnimated(true);

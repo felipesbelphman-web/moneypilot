@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
 
 type MoneyPilotMobileAuthProps = {
   isLogin?: boolean;
@@ -22,6 +24,8 @@ export default function MoneyPilotMobileAuth({
   onForgotPassword,
   onVerifyEmail,
 }: MoneyPilotMobileAuthProps) {
+  const { language } = useLanguage();
+  const t = translations[language];
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -47,10 +51,22 @@ const passwordStrength =
   passwordLevel === 0
     ? ""
     : passwordLevel === 1
-      ? "Fraca"
+      ? t.auth.strength.weak
       : passwordLevel === 2
-        ? "Média"
-        : "Forte";
+        ? t.auth.strength.medium
+        : t.auth.strength.strong;
+
+  const hero = t.auth.hero[
+    isResetPassword
+      ? "resetPassword"
+      : isVerifyEmail
+        ? "verifyEmail"
+        : isForgotPassword
+          ? "forgotPassword"
+          : isLogin
+            ? "login"
+            : "signup"
+  ];
 
   return (
     <div className="w-[440px] bg-white">
@@ -98,72 +114,12 @@ const passwordStrength =
             {/* Texto */}
             <div className="flex flex-col gap-3">
                 <h1 className="text-[30px] font-semibold leading-[38px] text-white">
-                {isResetPassword ? (
-                    <>
-                    <span className="block">
-                        Invista hoje no futuro
-                    </span>
-
-                    <span className="block">
-                        que você deseja.
-                    </span>
-                    </>
-                ) : isVerifyEmail ? (
-                    <>
-                    <span className="block">
-                        Um novo amor também
-                    </span>
-
-                    <span className="block">
-                        merece um bom
-                    </span>
-
-                    <span className="block">
-                        planejamento.
-                    </span>
-                    </>
-                ) : isForgotPassword ? (
-                    <>
-                    <span className="block whitespace-nowrap">
-                        O grande dia merece um
-                    </span>
-
-                    <span className="block whitespace-nowrap">
-                        grande planejamento.
-                    </span>
-                    </>
-                ) : isLogin ? (
-                    <>
-                    <span className="block whitespace-nowrap">
-                        Seu próximo carro
-                    </span>
-
-                    <span className="block whitespace-nowrap">
-                        começa com um plano.
-                    </span>
-                    </>
-                ) : (
-                    <>
-                    <span className="block whitespace-nowrap">
-                        A casa dos seus sonhos
-                    </span>
-
-                    <span className="block whitespace-nowrap">
-                        começa com planejamento.
-                    </span>
-                    </>
-                )}
+                {hero.titleLines.map((line) => (
+                  <span key={line} className="block whitespace-nowrap">{line}</span>
+                ))}
                 </h1>
               <p className="text-[18px] font-medium leading-6 text-[#c3cfcf]">
-                {isResetPassword
-                    ? "Crie uma meta para faculdade, cursos ou certificações e acompanhe seu progresso até alcançar seus objetivos."
-                    : isVerifyEmail
-                    ? "Organize suas finanças para a chegada do bebê e prepare-se com mais tranquilidade para cada momento dessa nova fase."
-                    : isForgotPassword
-                        ? "Organize sua meta para cerimônia, festa e lua de mel sem perder o controle das suas finanças."
-                        : isLogin
-                        ? "Defina quanto precisa guardar e acompanhe sua evolução até chegar ao valor ideal para a sua compra."
-                        : "Organize seu dinheiro, acompanhe suas metas e construa passo a passo o caminho para o seu novo lar."}
+                {hero.description}
                 </p>
             </div>
 
@@ -180,12 +136,11 @@ const passwordStrength =
 
                     <div className="flex flex-1 flex-col gap-4">
                         <h3 className="text-[14px] font-semibold leading-6 text-[var(--text-primary)]">
-                        Segurança em primeiro lugar
+                        {t.auth.security.title}
                         </h3>
 
                         <p className="text-[11px] leading-[18px] text-[var(--text-secondary)]">
-                        Seus dados estão protegidos com criptografia e nunca compartilhamos suas
-                        informações com terceiros.
+                        {t.auth.security.description}
                         </p>
                     </div>
                     </div>
@@ -203,9 +158,9 @@ const passwordStrength =
                             />
 
                             <p className="text-[10px] leading-[13px] text-[#111827]">
-                            Privacidade
+                            {t.auth.security.privacy[0]}
                             <br />
-                            protegida
+                            {t.auth.security.privacy[1]}
                             </p>
                         </div>
 
@@ -220,9 +175,9 @@ const passwordStrength =
                             />
 
                             <p className="text-[10px] leading-[13px] text-[#111827]">
-                            Criptografia
+                            {t.auth.security.encryption[0]}
                             <br />
-                            de ponta
+                            {t.auth.security.encryption[1]}
                             </p>
                         </div>
 
@@ -237,9 +192,9 @@ const passwordStrength =
                             />
 
                             <p className="text-[10px] leading-[13px] text-[#111827]">
-                            Você no
+                            {t.auth.security.control[0]}
                             <br />
-                            controle
+                            {t.auth.security.control[1]}
                             </p>
                         </div>
 
@@ -254,9 +209,9 @@ const passwordStrength =
                             />
 
                             <p className="text-[10px] leading-[13px] text-[#111827]">
-                            Conexão
+                            {t.auth.security.connection[0]}
                             <br />
-                            segura
+                            {t.auth.security.connection[1]}
                             </p>
                         </div>
                         </div>
@@ -280,18 +235,18 @@ const passwordStrength =
                               />
 
                               <p className="text-[14px] font-semibold leading-[17px] tracking-[1.12px] text-[var(--brand-secondary)]">
-                                CRIAR NOVA SENHA
+                                {t.auth.eyebrow.newPassword}
                               </p>
                             </div>
 
                             {/* Título + descrição */}
                             <div className="flex flex-col gap-3">
                             <h2 className="text-[28px] font-semibold leading-[38px] text-[var(--text-primary)]">
-                                Criar uma nova senha
+                                {t.auth.title.resetPassword}
                             </h2>
 
                             <p className="text-[14px] font-medium leading-5 text-[var(--text-secondary)]">
-                                Escolha uma nova senha forte e segura para sua conta.
+                                {t.auth.description.resetPassword}
                             </p>
                             </div>
 
@@ -310,7 +265,7 @@ const passwordStrength =
                                 htmlFor="mobile-new-password"
                                 className="text-[14px] font-medium leading-5 text-[var(--text-primary)]"
                               >
-                                Nova Senha
+                                {t.auth.newPassword}
                               </label>
                             </div>
 
@@ -320,7 +275,7 @@ const passwordStrength =
                                 type={showNewPassword ? "text" : "password"}
                                 value={newPassword}
                                 onChange={(event) => setNewPassword(event.target.value)}
-                                placeholder="Digite sua nova senha"
+                                placeholder={t.auth.newPasswordPlaceholder}
                                 className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 pr-12 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
                                 />
 
@@ -328,7 +283,7 @@ const passwordStrength =
                                 type="button"
                                 onClick={() => setShowNewPassword((value) => !value)}
                                 className="absolute right-4 top-1/2 -translate-y-1/2"
-                                aria-label={showNewPassword ? "Ocultar senha" : "Mostrar senha"}
+                                aria-label={showNewPassword ? t.common.hidePassword : t.common.showPassword}
                                 >
                                 <Image
                                     src={
@@ -402,7 +357,7 @@ const passwordStrength =
                                 htmlFor="mobile-confirm-password"
                                 className="text-[14px] font-medium leading-5 text-[var(--text-primary)]"
                               >
-                                Confirmar nova senha
+                                {t.auth.confirmPassword}
                               </label>
                             </div>
 
@@ -410,7 +365,7 @@ const passwordStrength =
                                 <input
                                 id="mobile-confirm-password"
                                 type={showConfirmPassword ? "text" : "password"}
-                                placeholder="Digite sua senha"
+                                placeholder={t.auth.passwordPlaceholder}
                                 className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 pr-12 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
                                 />
 
@@ -419,7 +374,7 @@ const passwordStrength =
                                 onClick={() => setShowConfirmPassword((value) => !value)}
                                 className="absolute right-4 top-1/2 -translate-y-1/2"
                                 aria-label={
-                                    showConfirmPassword ? "Ocultar senha" : "Mostrar senha"
+                                    showConfirmPassword ? t.common.hidePassword : t.common.showPassword
                                 }
                                 >
                                 <Image
@@ -441,7 +396,7 @@ const passwordStrength =
                             type="button"
                             className="flex h-12 w-full shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)] text-[14px] font-semibold leading-5 text-white"
                             >
-                            Redefinir senha
+                            {t.auth.resetPassword}
                             </button>
 
                             {/* Voltar */}
@@ -458,7 +413,7 @@ const passwordStrength =
                                 className="h-6 w-6 shrink-0"
                               />
 
-                              <span>Voltar para o Login</span>
+                              <span>{t.auth.backToLogin}</span>
                             </button>
                         </div>
                         ) : isVerifyEmail ? (
@@ -466,7 +421,7 @@ const passwordStrength =
                         <div className="flex h-[690px] w-[392px] flex-col items-start justify-between rounded-[22px] border-2 border-[var(--brand-secondary)] bg-white p-10 shadow-[0_8px_24px_rgba(0,18,26,0.08)]">
                             {/* Eyebrow */}
                             <p className="w-full text-left text-[12px] font-semibold leading-[17px] tracking-[0.96px] text-[var(--brand-secondary)]">
-                            VERIFIQUE SEU E-MAIL
+                            {t.auth.eyebrow.verifyEmail}
                             </p>
 
                     {/* Ícone */}
@@ -482,15 +437,15 @@ const passwordStrength =
 
                     {/* Título */}
                     <h2 className="w-full text-left text-[28px] font-semibold leading-[42px] text-[var(--text-primary)]">
-                    Verifique seu e-mail
+                    {t.auth.title.verifyEmail}
                     </h2>
 
                     {/* Mensagem + aviso */}
                     <div className="flex w-full flex-col gap-3">
                     <p className="w-full text-left text-[14px] font-medium leading-5 text-[var(--text-secondary)]">
-                        Enviamos um link de recuperação para{" "}
+                        {t.auth.description.verifyEmail}{" "}
                         <span className="font-semibold text-[var(--text-primary)]">
-                        voce@exemplo.com
+                        {t.auth.emailPlaceholder}
                         </span>
                     </p>
 
@@ -504,11 +459,11 @@ const passwordStrength =
                         />
 
                         <p className="flex-1 text-left text-[14px] font-medium leading-5 text-[var(--text-secondary)]">
-                        O link é{" "}
+                        {t.auth.linkValidPrefix}{" "}
                         <span className="font-semibold text-[var(--text-primary)]">
-                            válido por 1 hora.
+                            {t.auth.linkValidDuration}
                         </span>{" "}
-                        Verifique também sua caixa de spam.
+                        {t.auth.checkSpam}
                         </p>
                     </div>
                     </div>
@@ -518,7 +473,7 @@ const passwordStrength =
                       type="button"
                       className="flex h-12 w-full shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)] text-[14px] font-semibold leading-5 text-white"
                     >
-                      Enviar novamente
+                      {t.auth.resend}
                     </button>
 
                     {/* Voltar */}
@@ -535,7 +490,7 @@ const passwordStrength =
                         className="h-6 w-6 shrink-0"
                     />
 
-                    <span>Voltar para o Login</span>
+                    <span>{t.auth.backToLogin}</span>
                     </button>
                 </div>
                 ) : isForgotPassword ? (
@@ -543,7 +498,7 @@ const passwordStrength =
           <div className="flex h-[690px] w-[392px] flex-col justify-between rounded-[20px] border-2 border-[#005f73] bg-white p-6 shadow-[0_8px_24px_rgba(0,18,26,0.08)]">
             {/* Eyebrow */}
             <p className="text-[12px] font-semibold leading-[17px] tracking-[0.96px] text-[#005f73]">
-              RECUPERAR ACESSO
+              {t.auth.eyebrow.recoverAccess}
             </p>
 
             {/* Ícone */}
@@ -559,13 +514,12 @@ const passwordStrength =
 
             {/* Título */}
             <h2 className="text-[28px] font-semibold leading-[42px] text-[var(--text-primary)]">
-              Esqueci minha senha
+              {t.auth.title.forgotPassword}
             </h2>
 
             {/* Descrição */}
             <p className="text-[14px] font-medium leading-5 text-[var(--text-secondary)]">
-              Informe o e-mail da sua conta que enviaremos um link para você
-              redefinir sua senha.
+              {t.auth.description.forgotPassword}
             </p>
 
             {/* E-mail */}
@@ -574,13 +528,13 @@ const passwordStrength =
                 htmlFor="mobile-forgot-email"
                 className="text-[14px] font-medium leading-5 text-[var(--text-primary)]"
               >
-                E-mail
+                {t.auth.email}
               </label>
 
               <input
                 id="mobile-forgot-email"
                 type="email"
-                placeholder="voce@exemplo.com"
+                placeholder={t.auth.emailPlaceholder}
                 className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] font-medium outline-none placeholder:text-[var(--text-tertiary)]"
               />
             </div>
@@ -591,7 +545,7 @@ const passwordStrength =
             onClick={onVerifyEmail}
             className="flex h-12 w-full shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)] text-[14px] font-semibold leading-5 text-white"
             >
-            Enviar link de recuperação
+            {t.auth.sendRecoveryLink}
             </button>
 
             {/* Divisor */}
@@ -599,7 +553,7 @@ const passwordStrength =
               <div className="h-px flex-1 bg-[var(--border-default)]" />
 
               <span className="text-[12px] font-medium leading-[17px] text-[var(--text-tertiary)]">
-                ou
+                {t.auth.or}
               </span>
 
               <div className="h-px flex-1 bg-[var(--border-default)]" />
@@ -619,7 +573,7 @@ const passwordStrength =
               />
 
               <span className="text-[14px] font-medium leading-5 text-[var(--text-secondary)]">
-                Entrar com Google
+                {t.auth.google}
               </span>
             </button>
 
@@ -637,7 +591,7 @@ const passwordStrength =
                 className="h-6 w-6 shrink-0"
               />
 
-              <span>Voltar para o Login</span>
+              <span>{t.auth.backToLogin}</span>
             </button>
           </div>
         ) : (
@@ -645,7 +599,7 @@ const passwordStrength =
           <div className="flex w-[392px] flex-col gap-5 rounded-[20px] border-[1.6px] border-[var(--brand-secondary)] bg-white px-3 py-6 shadow-[0_8px_24px_rgba(0,18,26,0.08)]">
             {/* Eyebrow */}
             <p className="text-[12px] font-semibold leading-[17px] tracking-[0.96px] text-[var(--brand-secondary)]">
-              BEM-VINDO AO MONEYPILOT
+              {t.auth.eyebrow.welcome}
             </p>
 
             {/* Tabs */}
@@ -659,7 +613,7 @@ const passwordStrength =
                     : "border-transparent bg-[#fcfdfd] text-[var(--text-secondary)]"
                 }`}
               >
-                Criar conta
+                {t.auth.createAccount}
               </button>
 
               <button
@@ -671,7 +625,7 @@ const passwordStrength =
                     : "border-[var(--brand-primary)] bg-[#fcfdfd] text-[var(--brand-primary)]"
                 }`}
               >
-                Entrar
+                {t.auth.login}
               </button>
             </div>
 
@@ -681,13 +635,13 @@ const passwordStrength =
                 htmlFor="mobile-signup-email"
                 className="text-[14px] font-medium text-[var(--text-primary)]"
               >
-                E-mail
+                {t.auth.email}
               </label>
 
               <input
                 id="mobile-signup-email"
                 type="email"
-                placeholder="voce@exemplo.com"
+                placeholder={t.auth.emailPlaceholder}
                 className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
               />
             </div>
@@ -698,13 +652,13 @@ const passwordStrength =
                 htmlFor="mobile-signup-password"
                 className="text-[14px] font-medium text-[var(--text-primary)]"
               >
-                Senha
+                {t.auth.password}
               </label>
 
               <input
                 id="mobile-signup-password"
                 type="password"
-                placeholder="Digite sua senha"
+                placeholder={t.auth.passwordPlaceholder}
                 className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
               />
             </div>
@@ -715,7 +669,7 @@ const passwordStrength =
               onClick={onForgotPassword}
               className="w-full text-right text-[13px] font-medium leading-5 text-[var(--brand-primary)]"
             >
-              Esqueci minha senha
+              {t.auth.forgotPassword}
             </button>
 
             {/* Criar conta */}
@@ -723,7 +677,7 @@ const passwordStrength =
               type="button"
               className="flex h-12 w-full items-center justify-center rounded-lg bg-[var(--brand-primary)] text-[14px] font-medium text-white"
             >
-              Criar conta
+              {isLogin ? t.auth.login : t.auth.createAccount}
             </button>
 
             {/* Divisor */}
@@ -731,7 +685,7 @@ const passwordStrength =
               <div className="h-px flex-1 bg-[var(--border-default)]" />
 
               <span className="text-[12px] font-medium text-[var(--text-tertiary)]">
-                ou
+                {t.auth.or}
               </span>
 
               <div className="h-px flex-1 bg-[var(--border-default)]" />
@@ -750,7 +704,7 @@ const passwordStrength =
               />
 
               <span className="text-[14px] font-medium text-[var(--text-secondary)]">
-                Entrar com Google
+                {t.auth.google}
               </span>
             </button>
 
@@ -759,8 +713,10 @@ const passwordStrength =
               type="button"
               className="w-full text-center text-[13px] font-medium leading-5 text-[var(--text-secondary)]"
             >
-              Já tem uma conta?{" "}
-              <span className="text-[var(--brand-primary)]">Entrar</span>
+              {isLogin ? t.auth.noAccount : t.auth.alreadyHaveAccount}{" "}
+              <span className="text-[var(--brand-primary)]">
+                {isLogin ? t.auth.createAccount : t.auth.login}
+              </span>
             </button>
           </div>
         )}
