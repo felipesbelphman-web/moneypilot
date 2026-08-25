@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bebas_Neue, Inter, Poppins } from "next/font/google";
 
 import { LanguageProvider } from "@/components/LanguageProvider";
+import DesktopSidebar from "@/components/navigation/DesktopSidebar";
 
 import "./globals.css";
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${poppins.variable} ${bebasNeue.variable} antialiased`}
     >
       <body>
+        <DesktopSidebar />
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

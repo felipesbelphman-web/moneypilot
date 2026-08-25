@@ -279,6 +279,7 @@ const passwordStrength =
                       : isForgotPassword
                         ? t.auth.eyebrow.recoverAccess
                         : t.auth.eyebrow.welcome}
+                        
                 </p>
               </div>
                   {isVerifyEmail && (

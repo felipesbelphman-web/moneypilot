@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Pie chart icon" clip-path="url(#clip0_0_329)">
+<path id="Vector" d="M8 1.75V8H14.25C14.25 9.23613 13.8834 10.4445 13.1967 11.4723C12.5099 12.5001 11.5338 13.3012 10.3918 13.7742C9.24973 14.2473 7.99307 14.3711 6.78069 14.1299C5.5683 13.8887 4.45466 13.2935 3.58058 12.4194C2.7065 11.5453 2.11125 10.4317 1.87009 9.21931C1.62893 8.00693 1.75271 6.75027 2.22575 5.60823C2.6988 4.46619 3.49988 3.49007 4.52769 2.80331C5.55549 2.11656 6.76387 1.75 8 1.75Z" stroke="#F5F7FA" stroke-width="1.6" stroke-linejoin="round"/>
+<path id="Vector_2" d="M10 1.85C11.0888 1.88736 12.1228 2.33659 12.8931 3.10691C13.6634 3.87724 14.1126 4.91124 14.15 6H10V1.85Z" stroke="#F5F7FA" stroke-width="1.6" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_329">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>
