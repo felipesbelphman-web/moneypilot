@@ -36,7 +36,35 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
 
-  return supabaseResponse;
+const isAuthenticated = Boolean(data?.claims?.sub);
+
+const privateRoutes = [
+  "/dashboard",
+  "/transactions",
+  "/budgets",
+  "/insights",
+  "/goals",
+  "/investments",
+  "/settings",
+  "/categories",
+];
+
+const isPrivateRoute = privateRoutes.some(
+  (route) =>
+    request.nextUrl.pathname === route ||
+    request.nextUrl.pathname.startsWith(`${route}/`),
+);
+
+if (isPrivateRoute && !isAuthenticated) {
+  const redirectUrl = request.nextUrl.clone();
+
+  redirectUrl.pathname = "/auth";
+  redirectUrl.searchParams.set("mode", "login");
+
+  return NextResponse.redirect(redirectUrl);
+}
+
+return supabaseResponse;
 }

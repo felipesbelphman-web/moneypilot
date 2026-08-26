@@ -6,6 +6,7 @@ import MobileScaleCanvas from "@/components/MobileScaleCanvas";
 import MoneyPilotMobileAuth from "@/components/MoneyPilotMobileAuth";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
+import { signIn, signUp } from "./actions";
 
 type AuthMode =
   | "signup"
@@ -387,6 +388,12 @@ const passwordStrength =
   </>
 )}
 
+              {!isForgotPassword && !isVerifyEmail && !isResetPassword && (
+                <form
+                  id="auth-credentials-form"
+                  action={isLogin ? signIn : signUp}
+                />
+              )}
               {!isVerifyEmail && !isResetPassword && (
   <>
     {/* E-mail */}
@@ -400,7 +407,15 @@ const passwordStrength =
 
           <input
             id="email"
+            name="email"
             type="email"
+            form={
+              !isForgotPassword && !isVerifyEmail && !isResetPassword
+                ? "auth-credentials-form"
+                : undefined
+            }
+            required={!isForgotPassword && !isVerifyEmail && !isResetPassword}
+            autoComplete="email"
             placeholder={t.auth.emailPlaceholder}
             className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
           />
@@ -420,12 +435,16 @@ const passwordStrength =
       </label>
 
       <div className="relative">
-  <input
-    id="password"
-    type={showPassword ? "text" : "password"}
-    placeholder={t.auth.passwordPlaceholder}
-    className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 pr-12 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
-  />
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            form="auth-credentials-form"
+            required
+            autoComplete={isLogin ? "current-password" : "new-password"}
+            placeholder={t.auth.passwordPlaceholder}
+            className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 pr-12 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
+          />
 
   <button
     type="button"
@@ -601,7 +620,16 @@ const passwordStrength =
 
               {/* Ação principal */}
               <button
-                type="button"
+                type={
+                  !isForgotPassword && !isVerifyEmail && !isResetPassword
+                    ? "submit"
+                    : "button"
+                }
+                form={
+                  !isForgotPassword && !isVerifyEmail && !isResetPassword
+                    ? "auth-credentials-form"
+                    : undefined
+                }
                 onClick={() => {
                   if (isResetPassword) {
                     setMode("login");
