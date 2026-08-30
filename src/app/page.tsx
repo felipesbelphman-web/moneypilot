@@ -30,7 +30,7 @@ const benefitIcons = [
         const t = translations[language].landing;
 
         return (
-          <main className="min-h-screen bg-white md:h-screen md:overflow-hidden">
+          <main className="public-identity min-h-screen bg-white [--brand-primary:#3b82f6] [--brand-secondary:#3b82f6] [--brand-soft:#94d2bd] [--brand-highlight:#e9d8a6] md:h-[865px] md:min-h-0 md:overflow-hidden">
             {/* Mobile */}
               <div className="md:hidden">
                 <MobileScaleCanvas>
@@ -42,7 +42,7 @@ const benefitIcons = [
             <section className="hidden h-full w-full md:flex">
         {/* Lado esquerdo */}
 <div className="relative h-full w-[44.7917%] overflow-hidden">
-  <div className="flex h-[865px] w-[860px] origin-top-left scale-[0.84] flex-col px-[72px] pb-[48px] pt-[64px]">
+  <div className="flex h-[865px] w-[860px] origin-top-left scale-[0.84] flex-col px-[72px] pb-[48px] pt-[64px] min-[1600px]:scale-100">
 
     <div className="flex w-full items-center justify-between">
   <Image
@@ -56,7 +56,7 @@ const benefitIcons = [
   <LanguageSelector />
 </div>
 
-          <h1 className="mt-7 max-w-[700px] text-[48px] font-semibold leading-[62px] tracking-[-0.96px] text-[var(--text-primary)]">
+          <h1 className="mt-[30px] min-h-[194px] max-w-[700px] text-[48px] font-semibold leading-[62px] tracking-[-0.96px] text-[var(--text-primary)]">
             {t.hero.titleLine1}
             <br />
             {t.hero.titleLine2}
@@ -64,22 +64,22 @@ const benefitIcons = [
             {t.hero.titleLine3}
           </h1>
 
-          <p className="mt-7 max-w-[680px] text-[18px] font-medium leading-6 text-[var(--text-secondary)]">
+          <p className="mt-[30px] min-h-[60px] max-w-[680px] text-[18px] font-medium leading-6 text-[var(--text-secondary)]">
             {t.hero.description}
           </p>
 
           {/* Accent */}
-          <div className="mt-7 flex h-1 items-center gap-2">
-            <span className="h-1 w-[54px] rounded-full bg-[var(--brand-secondary)]" />
+          <div className="mt-[30px] flex h-1 items-center gap-2">
+            <span className="h-1 w-[54px] rounded-full bg-[#3b82f6]" />
             <span className="h-1 w-[26px] rounded-full bg-[var(--brand-soft)]" />
             <span className="h-1 w-3 rounded-full bg-[var(--brand-highlight)]" />
           </div>
 
           {/* Botões */}
-            <div className="mt-[28px] flex h-[56px] w-[616px] gap-4">
+            <div className="mt-[30px] flex h-[56px] w-[616px] gap-4">
               <Link
                 href="/auth"
-                className="flex h-[56px] w-[300px] shrink-0 items-center justify-center gap-[10px] rounded-[8px] bg-[var(--brand-primary)] text-[14px] font-medium text-white transition-opacity hover:opacity-90"
+                className="flex h-[56px] w-[300px] shrink-0 items-center justify-center gap-[10px] rounded-[8px] bg-[#3b82f6] text-[14px] font-medium text-white transition-colors hover:bg-[#2563eb]"
               >
                 <Image
                   src="/moneypilot/icon-user-circle.svg"
@@ -93,7 +93,7 @@ const benefitIcons = [
 
               <Link
                 href="/auth?mode=login"
-                className="flex h-[56px] w-[300px] shrink-0 items-center justify-center gap-[10px] rounded-[8px] border border-[var(--brand-primary)] bg-white text-[14px] font-medium text-[var(--brand-primary)] transition-colors hover:bg-[#eef6f6]"
+                className="flex h-[56px] w-[300px] shrink-0 items-center justify-center gap-[10px] rounded-[8px] border !border-[#3b82f6] bg-white text-[14px] font-medium !text-[#3b82f6] transition-colors hover:bg-[#eff6ff]"
               >
                 {t.hero.login}
 
@@ -108,17 +108,17 @@ const benefitIcons = [
 
           <Link
             href="/auth?mode=login"
-            className="mt-7 w-fit text-xs font-medium text-[var(--brand-primary)] hover:underline"
+            className="mt-[30px] w-fit text-xs font-medium !text-[#3b82f6] hover:underline"
           >
               {t.hero.alreadyHaveAccount} {t.hero.login}
           </Link>
 
           {/* Benefícios */}
-          <div className="mt-7 grid w-full max-w-[716px] grid-cols-3 gap-[14px]">
+          <div className="mt-[30px] grid w-full max-w-[716px] grid-cols-3 gap-[14px]">
             {t.benefits.map((benefit, index) => (
               <article
                 key={benefit.title}
-                className="h-[132px] rounded-2xl border border-[var(--brand-primary)] bg-[var(--background-elevated)] px-[14px] py-4 shadow-[0_1px_2px_rgba(0,18,25,0.05)]"
+                className="h-[148px] rounded-2xl border border-[#3b82f6] bg-white px-[14px] py-4 shadow-[0_1px_2px_rgba(0,18,25,0.05)]"
               >
                 <Image
                   src={benefitIcons[index]}
@@ -139,7 +139,7 @@ const benefitIcons = [
           </div>
 
           {/* Segurança */}
-          <div className="mt-7 flex items-center gap-[10px]">
+          <div className="mt-[30px] flex items-center gap-[10px]">
             <Image
               src="/moneypilot/icon-shield-chevron.svg"
               alt=""
@@ -165,7 +165,7 @@ const benefitIcons = [
   sizes="55vw"
  />
   {/* Dashboard financeiro */}
-<div className="absolute left-[48px] top-1/2 z-10 h-[616px] w-[548px] origin-left -translate-y-1/2 scale-[0.82]">
+<div className="absolute left-[48px] top-1/2 z-10 h-[616px] w-[548px] origin-left -translate-y-1/2 scale-[0.82] min-[1600px]:scale-100">
 
   {/* Card: Visão geral */}
   <article className="money-card-in relative h-[175px] w-[359px] overflow-hidden rounded-[18px] bg-white">
@@ -185,7 +185,7 @@ const benefitIcons = [
     </div>
   </article>
       {/* Card: Receitas */}
-<article className="absolute left-[373px] top-0 h-[175px] w-[175px] overflow-hidden rounded-[20px] bg-[#005f73]">
+<article className="absolute left-[373px] top-0 h-[175px] w-[175px] overflow-hidden rounded-[20px] bg-[#3b82f6]">
 
     {/* Ícone */}
     <div className="absolute left-[16px] top-[20px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-white">
@@ -202,7 +202,7 @@ const benefitIcons = [
   </article>
 
   {/* Card: Despesas */}
-  <article className="absolute left-0 top-[187px] h-[175px] w-[175px] overflow-hidden rounded-[19px] bg-[#9b2226]">
+  <article className="absolute left-0 top-[187px] h-[175px] w-[175px] overflow-hidden rounded-[19px] bg-[#ae2012]">
 
     {/* Título */}
     <p className="absolute left-[12px] top-[18px] flex h-[32px] items-center text-[14px] font-medium text-white">
@@ -249,7 +249,7 @@ const benefitIcons = [
 
             </article>
             {/* Card: Saldo líquido */}
-            <article className="absolute left-[373px] top-[187px] h-[175px] w-[175px] overflow-hidden rounded-[19px] bg-[#d3fb6d] px-[14px] py-[18px]">
+            <article className="absolute left-[373px] top-[187px] h-[175px] w-[175px] overflow-hidden rounded-[19px] bg-[#22c55e] px-[14px] py-[18px]">
 
              {/* Ícone */}
               <div className="absolute left-[14px] top-[18px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-[#161616]">

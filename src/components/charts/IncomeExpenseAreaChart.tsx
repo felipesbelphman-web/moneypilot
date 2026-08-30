@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrency } from "@/components/CurrencyProvider";
+
 import {
     Area,
     AreaChart,
@@ -51,6 +53,7 @@ const expenseData = [
 export function IncomeExpenseAreaChart({
     variant,
 }: IncomeExpenseAreaChartProps) {
+    const { formatMoney: money } = useCurrency();
     const isIncome = variant === "income";
 
     const data = isIncome ? incomeData : expenseData;
@@ -135,7 +138,7 @@ export function IncomeExpenseAreaChart({
                                             color: accent,
                                         }}
                                     >
-                                        €{value.toLocaleString("pt-PT")}
+                                        {money(value)}
                                     </span>
                                 </div>
                             );

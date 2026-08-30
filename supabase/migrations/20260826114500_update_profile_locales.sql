@@ -1,0 +1,13 @@
+alter table public.profiles
+alter column locale set default 'en';
+
+update public.profiles
+set locale = 'pt'
+where locale = 'pt-BR';
+
+alter table public.profiles
+drop constraint if exists profiles_locale_allowed;
+
+alter table public.profiles
+add constraint profiles_locale_allowed
+check (locale in ('en', 'pt', 'es'));

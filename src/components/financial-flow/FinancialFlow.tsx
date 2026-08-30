@@ -1,22 +1,20 @@
 "use client";
 
-import Image from "next/image";
+import { useCurrency } from "@/components/CurrencyProvider";
+
 import { useState } from "react";
+import type { CSSProperties } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
+import { translations } from "@/i18n/translations";
+import type { AppTranslation } from "@/i18n/app-translations";
+import type { DashboardCategorySpending } from "@/components/dashboard/dashboard-financial-summary";
 
 type FinancialTab = "balance" | "income" | "expense";
 type FinancialView = "bars" | "donut" | "trend";
 
-const dates = [
-    "15 Ago",
-    "16 Ago",
-    "17 Ago",
-    "18 Ago",
-    "19 Ago",
-    "20 Ago",
-    "21 Ago",
-];
+const dates = [15, 16, 17, 18, 19, 20, 21];
 
-const financialFlowData = {
+const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value: number) => string) => ({
     balance: {
         accent: "#3B82F6",
         secondary: "#60A5FA",
@@ -25,26 +23,26 @@ const financialFlowData = {
 
         rows: [
             {
-                label: "Receitas",
-                value: "€3.650,00",
+                label: t.income,
+                value: money(3650),
                 color: "#22C55E",
                 dot: "#22C55E",
             },
             {
-                label: "Despesas",
-                value: "€2.180,50",
+                label: t.expenses,
+                value: money(2180.5),
                 color: "#F43F5E",
                 dot: "#F43F5E",
             },
             {
-                label: "Saldo em contas",
-                value: "€2.480,75",
+                label: t.labels.accountBalance,
+                value: money(2480.75),
                 color: "#3B82F6",
                 dot: "#3B82F6",
             },
         ],
 
-        comparisonLabel: "vs. período anterior",
+        comparisonLabel: t.versusPreviousPeriod,
         comparison: "+12,6%",
         direction: "↗",
 
@@ -58,52 +56,52 @@ const financialFlowData = {
             [73, 45],
         ],
 
-        donutTitle: "Saldo disponível",
-        donutValue: "€2.480,75",
-        donutMeta: "5 contas",
+        donutTitle: t.availableBalance,
+        donutValue: money(2480.75),
+        donutMeta: t.labels.accounts,
         donut: [
             {
-                label: "Conta principal",
-                value: "€1.120,00",
+                label: t.labels.mainAccount,
+                value: money(1120),
                 percent: 45.1,
                 color: "#3B82F6",
             },
             {
-                label: "Poupança",
-                value: "€780,00",
+                label: t.savings,
+                value: money(780),
                 percent: 31.4,
                 color: "#2563EB",
             },
             {
                 label: "Revolut",
-                value: "€330,00",
+                value: money(330),
                 percent: 13.3,
                 color: "#60A5FA",
             },
             {
-                label: "Investimentos",
-                value: "€200,00",
+                label: t.labels.investments,
+                value: money(200),
                 percent: 8.1,
                 color: "#1D4ED8",
             },
             {
-                label: "Carteira",
-                value: "€50,75",
+                label: t.labels.wallet,
+                value: money(50.75),
                 percent: 2.1,
                 color: "#93C5FD",
             },
         ],
 
-        totalLabel: "Saldo total",
-        total: "€2.480,75",
+        totalLabel: t.labels.totalBalance,
+        total: money(2480.75),
 
         trend: {
-            label: "Saldo disponível · últimos 7 dias",
-            value: "€2.480,75",
+            label: t.lastSevenDaysBalance,
+            value: money(2480.75),
             change: "+12,6%",
-            delta: "↑ +€630,75 no período",
+            delta: `↑ +${money(630.75)} ${t.labels.inPeriod}`,
             values: [1850, 2100, 1980, 2310, 2150, 2280, 2480.75],
-            yLabels: ["€2.500", "€2.000", "€1.500", "€1.000"],
+            yLabels: [money(2500), money(2000), money(1500), money(1000)],
         },
     },
 
@@ -115,26 +113,26 @@ const financialFlowData = {
 
         rows: [
             {
-                label: "Receitas",
-                value: "€3.650,00",
+                label: t.income,
+                value: money(3650),
                 color: "#22C55E",
                 dot: "#22C55E",
             },
             {
-                label: "Média / dia",
-                value: "€521,43",
+                label: t.averagePerDay,
+                value: money(521.43),
                 color: "#F5F7FA",
                 dot: "#15803D",
             },
             {
-                label: "Maior entrada",
-                value: "€920,00",
+                label: t.labels.largestIncome,
+                value: money(920),
                 color: "#F5F7FA",
                 dot: "#22C55E",
             },
         ],
 
-        comparisonLabel: "vs. mês passado",
+        comparisonLabel: t.versusLastMonth,
         comparison: "+12,4%",
         direction: "↗",
 
@@ -148,52 +146,52 @@ const financialFlowData = {
             [73, 45],
         ],
 
-        donutTitle: "Receitas",
-        donutValue: "€3.650,00",
-        donutMeta: "5 fontes",
+        donutTitle: t.income,
+        donutValue: money(3650),
+        donutMeta: t.labels.sources,
         donut: [
             {
-                label: "Salário",
-                value: "€2.044,00",
+                label: t.salary,
+                value: money(2044),
                 percent: 56,
                 color: "#22C55E",
             },
             {
-                label: "Freelance / Projetos",
-                value: "€803,00",
+                label: t.labels.freelanceProjects,
+                value: money(803),
                 percent: 22,
                 color: "#16A34A",
             },
             {
-                label: "Investimentos",
-                value: "€438,00",
+                label: t.labels.investments,
+                value: money(438),
                 percent: 12,
                 color: "#4ADE80",
             },
             {
-                label: "Negócios",
-                value: "€219,00",
+                label: t.business,
+                value: money(219),
                 percent: 6,
                 color: "#15803D",
             },
             {
-                label: "Outros",
-                value: "€146,00",
+                label: t.labels.other,
+                value: money(146),
                 percent: 4,
                 color: "#86EFAC",
             },
         ],
 
-        totalLabel: "Total receitas",
-        total: "€3.650,00",
+        totalLabel: t.labels.totalIncome,
+        total: money(3650),
 
         trend: {
-            label: "Receitas · últimos 7 dias",
-            value: "€3.650,00",
+            label: t.lastSevenDaysIncome,
+            value: money(3650),
             change: "+12,4%",
-            delta: "↑ +€750,00 no período",
+            delta: `↑ +${money(750)} ${t.labels.inPeriod}`,
             values: [430, 560, 510, 690, 610, 720, 820],
-            yLabels: ["€1.000", "€750", "€500", "€250"],
+            yLabels: [money(1000), money(750), money(500), money(250)],
         },
     },
 
@@ -205,26 +203,26 @@ const financialFlowData = {
 
         rows: [
             {
-                label: "Despesas",
-                value: "€2.180,50",
+                label: t.expenses,
+                value: money(2180.5),
                 color: "#F43F5E",
                 dot: "#F43F5E",
             },
             {
-                label: "Maior categoria",
-                value: "Casa · 36%",
+                label: t.labels.largestCategory,
+                value: t.labels.homeShare,
                 color: "#F5F7FA",
                 dot: "#BE123C",
             },
             {
-                label: "Categorias",
+                label: t.labels.categories,
                 value: "5",
                 color: "#F5F7FA",
                 dot: "#F43F5E",
             },
         ],
 
-        comparisonLabel: "vs. período anterior",
+        comparisonLabel: t.versusPreviousPeriod,
         comparison: "-8,7%",
         direction: "↓",
 
@@ -238,55 +236,55 @@ const financialFlowData = {
             [72, 78],
         ],
 
-        donutTitle: "Total despesas",
-        donutValue: "€2.180,50",
-        donutMeta: "5 categorias",
+        donutTitle: t.labels.totalExpenses,
+        donutValue: money(2180.5),
+        donutMeta: t.labels.fiveCategories,
         donut: [
             {
-                label: "Moradia",
-                value: "€784,98",
+                label: t.labels.housing,
+                value: money(784.98),
                 percent: 36,
                 color: "#F43F5E",
             },
             {
-                label: "Alimentação",
-                value: "€501,52",
+                label: t.food,
+                value: money(501.52),
                 percent: 23,
                 color: "#E11D48",
             },
             {
-                label: "Transporte",
-                value: "€327,08",
+                label: t.labels.transportation,
+                value: money(327.08),
                 percent: 15,
                 color: "#FB7185",
             },
             {
-                label: "Assinaturas",
-                value: "€261,66",
+                label: t.labels.subscriptions,
+                value: money(261.66),
                 percent: 12,
                 color: "#BE123C",
             },
             {
-                label: "Lazer",
-                value: "€305,26",
+                label: t.labels.leisure,
+                value: money(305.26),
                 percent: 14,
                 color: "#FDA4AF",
             },
         ],
 
-        totalLabel: "Total despesas",
-        total: "€2.180,50",
+        totalLabel: t.labels.totalExpenses,
+        total: money(2180.5),
 
         trend: {
-            label: "Despesas · últimos 7 dias",
-            value: "€2.180,50",
+            label: t.lastSevenDaysExpenses,
+            value: money(2180.5),
             change: "-8,7%",
-            delta: "↓ -€207,78 vs. período anterior",
+            delta: `↓ ${money(-207.78)} ${t.versusPreviousPeriod}`,
             values: [360, 310, 330, 270, 305, 250, 220],
-            yLabels: ["€450", "€350", "€250", "€150"],
+            yLabels: [money(450), money(350), money(250), money(150)],
         },
     },
-} as const;
+});
 
 function buildDonutBackground(
     items: readonly {
@@ -306,13 +304,47 @@ function buildDonutBackground(
     return `conic-gradient(${sections.join(", ")})`;
 }
 
-export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
+export function FinancialFlow({ income, expenses, netCashFlow, categorySpending, showValues = true }: { income?: number; expenses?: number; netCashFlow?: number; categorySpending?: DashboardCategorySpending[]; showValues?: boolean }) {
+    const { language } = useLanguage();
+  const { formatMoney: money } = useCurrency();
+    const appT = translations[language];
+    const t = appT.financialFlow;
     const [financialTab, setFinancialTab] =
         useState<FinancialTab>("balance");
 
     const [financialView, setFinancialView] =
         useState<FinancialView>("bars");
 
+    const financialFlowData = getFinancialFlowData(t, money);
+    if (income !== undefined && expenses !== undefined && netCashFlow !== undefined) {
+        financialFlowData.balance.rows[0].value = money(income);
+        financialFlowData.balance.rows[1].value = money(expenses);
+        financialFlowData.balance.rows[2].label = "Net cash flow";
+        financialFlowData.balance.rows[2].value = money(netCashFlow);
+        financialFlowData.income.rows[0].value = money(income);
+        financialFlowData.income.rows[1].value = "—";
+        financialFlowData.income.rows[2].value = "—";
+        financialFlowData.expense.rows[0].value = money(expenses);
+        financialFlowData.expense.rows[1].value = categorySpending?.[0] ? `${categorySpending[0].category} · ${(categorySpending[0].percentage * 100).toFixed(1)}%` : "—";
+        financialFlowData.expense.rows[2].value = String(categorySpending?.length ?? 0);
+        for (const tab of ["balance", "income", "expense"] as const) {
+            const value = tab === "balance" ? netCashFlow : tab === "income" ? income : expenses;
+            financialFlowData[tab].bars = dates.map(() => [0, 0]);
+            financialFlowData[tab].comparisonLabel = "Current month";
+            financialFlowData[tab].comparison = "";
+            financialFlowData[tab].direction = "•";
+            financialFlowData[tab].donutTitle = tab === "balance" ? "Net cash flow" : tab === "income" ? t.income : t.expenses;
+            financialFlowData[tab].donutValue = money(value);
+            financialFlowData[tab].donutMeta = "Current month";
+            financialFlowData[tab].donut = [{ label: financialFlowData[tab].donutTitle, value: money(value), percent: 100, color: financialFlowData[tab].accent }];
+            financialFlowData[tab].total = money(value);
+            financialFlowData[tab].trend.value = money(value);
+            financialFlowData[tab].trend.change = "";
+            financialFlowData[tab].trend.delta = "Historical series unavailable";
+            financialFlowData[tab].trend.values = dates.map(() => 0);
+            financialFlowData[tab].trend.yLabels = ["", "", "", ""];
+        }
+    }
     const current = financialFlowData[financialTab];
 
     const donutBackground = buildDonutBackground(current.donut);
@@ -360,21 +392,21 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                 overflow-hidden
                 rounded-[16px]
                 border
-                border-[#28313B]
-                bg-[rgba(21,28,38,0.92)]
+                border-[var(--financial-flow-summary-border)]
+                bg-[var(--financial-summary-surface)]
                 px-[10px]
                 pb-[8px]
                 pt-[9px]
             "
         >
-            <p className="text-[11px] font-semibold text-[#F5F7FA]">
-                Resumo do período
+            <p className="text-[11px] font-semibold text-[var(--text-primary)]">
+                {t.periodSummary}
             </p>
 
             {current.rows.map((row, index) => (
                 <div key={row.label}>
                     {index === 2 && (
-                        <div className="mb-[6px] h-px w-[130px] bg-[#28313B]" />
+                        <div className="mb-[6px] h-px w-[130px] bg-[var(--financial-flow-divider)]" />
                     )}
 
                     <div className="flex h-[18px] w-[130px] items-center justify-between">
@@ -386,7 +418,7 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                                 }}
                             />
 
-                            <span className="text-[8.5px] text-[#9CA6B2]">
+                            <span className="text-[8.5px] text-[var(--financial-flow-muted)]">
                                 {row.label}
                             </span>
                         </div>
@@ -424,7 +456,7 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                     {current.direction}
                 </span>
 
-                <span className="text-[7.5px] text-[#7A8190]">
+                <span className="text-[7.5px] text-[var(--financial-flow-comparison)]">
                     {current.comparisonLabel}
                 </span>
 
@@ -446,17 +478,17 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
         }[] = [
             {
                 id: "bars",
-                label: "Visualização em barras",
+                label: t.barView,
                 icon: "/moneypilot/dashboard-flow-button-bars.svg",
             },
             {
                 id: "donut",
-                label: "Visualização de distribuição",
+                label: t.distributionView,
                 icon: "/moneypilot/dashboard-flow-button-pie.svg",
             },
             {
                 id: "trend",
-                label: "Visualização de tendência",
+                label: t.trendView,
                 icon: "/moneypilot/dashboard-flow-button-timeline.svg",
             },
         ];
@@ -486,23 +518,21 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                                 duration-200
                             "
                             style={{
-                                borderColor: active
-                                    ? current.accent
-                                    : "#28313B",
+                                borderColor: current.accent,
                                 backgroundColor: active
-                                    ? "#080B0F"
-                                    : "#19212C",
+                                    ? `${current.accent}4D`
+                                    : current.soft,
                                 boxShadow: active
                                     ? `0 0 6px ${current.glow}`
                                     : "none",
                             }}
                         >
-                            <Image
-                                src={view.icon}
-                                alt=""
-                                width={16}
-                                height={16}
-                                className="h-[16px] w-[16px]"
+                            <span
+                                className="financial-flow-icon-mask"
+                                style={{
+                                    "--financial-flow-icon": `url("${view.icon}")`,
+                                    "--financial-flow-icon-color": current.accent,
+                                } as CSSProperties}
                                 aria-hidden="true"
                             />
                         </button>
@@ -526,9 +556,9 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                 overflow-hidden
                 rounded-[19px]
                 border
-                border-[#28313B]
-                bg-[rgba(8,11,15,0.20)]
-                shadow-[inset_0_1px_0_rgba(255,255,255,0.025),0_10px_24px_rgba(0,0,0,0.08)]
+                border-[var(--financial-flow-border)]
+                bg-[var(--financial-flow-surface)]
+                shadow-[var(--financial-flow-shadow)]
                 backdrop-blur-[12px]
                 p-[12px]
             "
@@ -546,42 +576,43 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                             justify-center
                             rounded-full
                             border
-                            bg-[#080B0F]
+                            bg-[var(--background-card)]
                         "
                         style={{
                             borderColor: current.accent,
+                            backgroundColor: `${current.accent}4D`,
                             boxShadow: `0 0 6px ${current.glow}`,
                         }}
                     >
-                        <Image
-                            src={currentViewIcon}
-                            alt=""
-                            width={16}
-                            height={16}
-                            className="h-[16px] w-[16px]"
+                        <span
+                            className="financial-flow-icon-mask"
+                            style={{
+                                "--financial-flow-icon": `url("${currentViewIcon}")`,
+                                "--financial-flow-icon-color": current.accent,
+                            } as CSSProperties}
                             aria-hidden="true"
                         />
                     </div>
 
-                    <h2 className="text-[21px] font-bold leading-none text-[#F5F7FA]">
-                        Seu fluxo financeiro
+                    <h2 className="text-[21px] font-bold leading-none text-[var(--text-primary)]">
+                        {t.title}
                     </h2>
                 </div>
 
                 {/* SALDO / RECEITAS / DESPESAS */}
-                <div className="flex items-center gap-[5px]">
+                <div className="flex h-[27px] w-[272px] items-center justify-center gap-[24px] rounded-full border border-[var(--financial-flow-tab-border)] bg-[var(--financial-flow-tab-surface)] py-[10px] pl-[2px] pr-[12px]">
                     {[
                         {
                             id: "balance" as FinancialTab,
-                            label: "Saldo",
+                            label: t.balance,
                         },
                         {
                             id: "income" as FinancialTab,
-                            label: "Receitas",
+                            label: t.income,
                         },
                         {
                             id: "expense" as FinancialTab,
-                            label: "Despesas",
+                            label: t.expenses,
                         },
                     ].map((tab) => {
                         const active =
@@ -603,19 +634,18 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                                 }
                                 className={`
                                     flex
-                                    h-[30px]
+                                    h-[21px]
                                     items-center
                                     justify-center
                                     rounded-full
                                     border
-                                    px-[13px]
-                                    text-[11.5px]
+                                    text-[12px]
                                     transition-all
                                     duration-200
                                     ${
                                         active
-                                            ? "border-transparent font-semibold text-[#F5F7FA]"
-                                            : "border-[#28313B] font-medium text-[#9CA6B2]"
+                                            ? "border-transparent font-semibold text-[var(--primary-button-text)]"
+                                            : "border-transparent bg-transparent font-semibold text-[var(--text-primary)]"
                                     }
                                 `}
                                 style={
@@ -623,6 +653,7 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                                         ? {
                                               backgroundColor:
                                                   tabColor,
+                                              minWidth: "99px",
                                           }
                                         : undefined
                                 }
@@ -671,13 +702,13 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                             )}
                         </div>
 
-                        <div className="flex w-full justify-between text-center text-[7px] font-semibold text-[#9CA6B2]">
+                        <div className="flex w-full justify-between text-center text-[7px] font-semibold text-[var(--financial-flow-muted)]">
                             {dates.map((date) => (
                                 <span
                                     key={date}
                                     className="w-[40px]"
                                 >
-                                    {date}
+                                    {date} {t.months[7]}
                                 </span>
                             ))}
                         </div>
@@ -703,7 +734,7 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                                 }}
                             />
 
-                            <div className="absolute h-[72px] w-[72px] rounded-full bg-[#14191F]" />
+                            <div className="absolute h-[72px] w-[72px] rounded-full bg-[var(--background-card)]" />
 
                             <div className="relative z-10 flex flex-col items-center justify-center text-center">
                                 <span className="text-[6.5px] text-[#9CA6B2]">
@@ -724,7 +755,7 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                                 </span>
 
                                 <span className="mt-[1px] text-[5.5px] text-[#778190]">
-                                    distribuição atual
+                                    {t.currentDistribution}
                                 </span>
                             </div>
                         </div>
@@ -734,13 +765,13 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                         <div className="grid h-[14px] grid-cols-[1fr_70px_40px] text-[7px] text-[#8E96A5]">
                             <span className="pl-[13px]">
                                 {financialTab === "balance"
-                                    ? "Conta"
+                                    ? t.account
                                     : financialTab === "income"
-                                      ? "Fonte"
-                                      : "Categoria"}
+                                      ? t.labels.sources.replace("5 ", "")
+                                      : t.category}
                             </span>
 
-                            <span>Valor</span>
+                            <span>{appT.appTransactions.value}</span>
                             <span>%</span>
                         </div>
 
@@ -943,7 +974,7 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                                     key={date}
                                     className="w-[40px] text-center text-[6.5px] text-[#8993A1]"
                                 >
-                                    {date}
+                                    {date} {t.months[7]}
                                 </span>
                             ))}
                         </div>
@@ -958,7 +989,7 @@ export function FinancialFlow({ showValues = true }: { showValues?: boolean }) {
                         </span>
 
                         <span className="absolute right-[8px] top-[132px] text-[6.7px] text-[#6F7987]">
-                            15–21 Ago
+                            15–21 {t.months[7]}
                         </span>
                     </div>
 

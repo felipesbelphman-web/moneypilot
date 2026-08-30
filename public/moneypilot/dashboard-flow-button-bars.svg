@@ -1,7 +1,8 @@
 <svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g id="Bars icon">
-<path id="Vector" d="M3.5 9H3C2.44772 9 2 9.44772 2 10V13C2 13.5523 2.44772 14 3 14H3.5C4.05228 14 4.5 13.5523 4.5 13V10C4.5 9.44772 4.05228 9 3.5 9Z" stroke="#F5F7FA" stroke-width="1.5"/>
-<path id="Vector_2" d="M8.25 5H7.75C7.19772 5 6.75 5.44772 6.75 6V13C6.75 13.5523 7.19772 14 7.75 14H8.25C8.80228 14 9.25 13.5523 9.25 13V6C9.25 5.44772 8.80228 5 8.25 5Z" stroke="#F5F7FA" stroke-width="1.5"/>
-<path id="Vector_3" d="M13 2H12.5C11.9477 2 11.5 2.44772 11.5 3V13C11.5 13.5523 11.9477 14 12.5 14H13C13.5523 14 14 13.5523 14 13V3C14 2.44772 13.5523 2 13 2Z" stroke="#F5F7FA" stroke-width="1.5"/>
+<path id="Vector" d="M3.5 9H3C2.44772 9 2 9.44772 2 10V13C2 13.5523 2.44772 14 3 14H3.5C4.05228 14 4.5 13.5523 4.5 13V10C4.5 9.44772 4.05228 9 3.5 9Z" stroke="url(#iconGradient)" stroke-width="1.5"/>
+<path id="Vector_2" d="M8.25 5H7.75C7.19772 5 6.75 5.44772 6.75 6V13C6.75 13.5523 7.19772 14 7.75 14H8.25C8.80228 14 9.25 13.5523 9.25 13V6C9.25 5.44772 8.80228 5 8.25 5Z" stroke="url(#iconGradient)" stroke-width="1.5"/>
+<path id="Vector_3" d="M13 2H12.5C11.9477 2 11.5 2.44772 11.5 3V13C11.5 13.5523 11.9477 14 12.5 14H13C13.5523 14 14 13.5523 14 13V3C14 2.44772 13.5523 2 13 2Z" stroke="url(#iconGradient)" stroke-width="1.5"/>
 </g>
+<defs><linearGradient id="iconGradient" x1="8" y1="2" x2="8" y2="14" gradientUnits="userSpaceOnUse"><stop stop-color="#3B3B3E"/><stop offset="1" stop-color="#252526"/></linearGradient></defs>
 </svg>

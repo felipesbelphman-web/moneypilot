@@ -15,6 +15,15 @@ type AuthMode =
   | "verify-email"
   | "reset-password";
 
+type LoginErrorCode =
+  | "invalid-credentials"
+  | "auth-unavailable"
+  | "auth-error";
+
+function isLoginErrorCode(value: string | null): value is LoginErrorCode {
+  return value === "invalid-credentials" || value === "auth-unavailable" || value === "auth-error";
+}
+
 export default function AuthPage() {
   const { language } = useLanguage();
   const t = translations[language];
@@ -23,6 +32,7 @@ export default function AuthPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+  const [loginError, setLoginError] = useState<LoginErrorCode | null>(null);
 
 const passwordScore = [
   newPassword.length >= 8,
@@ -64,27 +74,54 @@ const passwordStrength =
             ? "login"
             : "signup"
   ];
+  const loginErrorMessage = loginError
+    ? {
+        en: {
+          "invalid-credentials": "Email or password is incorrect.",
+          "auth-unavailable": "We couldn't reach the authentication service. Please try again in a moment.",
+          "auth-error": "We couldn't sign you in. Please try again.",
+        },
+        pt: {
+          "invalid-credentials": "O email ou a palavra-passe está incorreto.",
+          "auth-unavailable": "Não foi possível contactar o serviço de autenticação. Tente novamente dentro de alguns instantes.",
+          "auth-error": "Não foi possível iniciar sessão. Tente novamente.",
+        },
+        es: {
+          "invalid-credentials": "El correo electrónico o la contraseña son incorrectos.",
+          "auth-unavailable": "No pudimos contactar con el servicio de autenticación. Inténtalo de nuevo en unos instantes.",
+          "auth-error": "No pudimos iniciar sesión. Inténtalo de nuevo.",
+        },
+        de: { "invalid-credentials": "E-Mail oder Passwort ist falsch.", "auth-unavailable": "Der Authentifizierungsdienst ist nicht erreichbar. Bitte versuche es gleich noch einmal.", "auth-error": "Die Anmeldung ist fehlgeschlagen. Bitte versuche es erneut." },
+        fr: { "invalid-credentials": "L’adresse e-mail ou le mot de passe est incorrect.", "auth-unavailable": "Le service d’authentification est inaccessible. Veuillez réessayer dans un instant.", "auth-error": "La connexion a échoué. Veuillez réessayer." },
+        nl: { "invalid-credentials": "E-mailadres of wachtwoord is onjuist.", "auth-unavailable": "De authenticatieservice is niet bereikbaar. Probeer het zo opnieuw.", "auth-error": "Inloggen is mislukt. Probeer het opnieuw." },
+        it: { "invalid-credentials": "L’e-mail o la password non è corretta.", "auth-unavailable": "Il servizio di autenticazione non è raggiungibile. Riprova tra poco.", "auth-error": "Accesso non riuscito. Riprova." },
+      }[language][loginError]
+    : null;
   useEffect(() => {
   const params = new URLSearchParams(window.location.search);
   const modeParam = params.get("mode");
+  const errorParam = params.get("error");
 
-  if (
+  const nextMode =
     modeParam === "signup" ||
     modeParam === "login" ||
     modeParam === "forgot-password" ||
     modeParam === "verify-email" ||
     modeParam === "reset-password"
-  ) {
-    const frame = requestAnimationFrame(() => {
-      setMode(modeParam);
-    });
+      ? modeParam
+      : null;
+  const nextLoginError = isLoginErrorCode(errorParam) ? errorParam : null;
 
-    return () => cancelAnimationFrame(frame);
-  }
+  const frame = requestAnimationFrame(() => {
+    if (nextMode) setMode(nextMode);
+    setLoginError(nextLoginError);
+  });
+
+  return () => cancelAnimationFrame(frame);
 }, []);
 
   return (
-  <main className="min-h-screen bg-white md:h-screen md:overflow-hidden">
+  <main className="public-identity min-h-screen bg-white md:h-screen md:overflow-hidden">
     {/* Mobile */}
     <div className="md:hidden">
       <MobileScaleCanvas>
@@ -114,7 +151,7 @@ const passwordStrength =
                   : isForgotPassword
                     ? "/moneypilot/auth-forgot-password-bg.png"
                     : isLogin
-                      ? "/moneypilot/auth-login-bg.png"
+                      ? "/moneypilot/auth-login-bg.jpg"
                       : "/moneypilot/auth-signup-bg.png"
             }
             alt=""
@@ -156,89 +193,28 @@ const passwordStrength =
                 </p>
               </div>
 
-              {/* Card de segurança */}
-              {/* Card de segurança */}
-              <div className="mt-9 flex w-[715px] items-center gap-6 rounded-[20px] border border-[var(--border-default)] bg-white p-6">
-              {/* Conteúdo de segurança */}
-              <div className="flex w-[368px] shrink-0 items-start gap-3">
-                <Image
-                  src="/moneypilot/security-shield-lock.svg"
-                  alt=""
-                  width={24}
-                  height={24}
-                  className="shrink-0"
-                />
+                            {/* Security card */}
+              <div className="mt-9 flex w-[715px] items-start rounded-[20px] border border-[#D4D4D4] bg-white p-6">
+                <div className="flex items-start gap-3">
+                  <Image
+                    src="/moneypilot/security-shield-lock.svg"
+                    alt=""
+                    width={24}
+                    height={24}
+                    className="shrink-0"
+                  />
 
-                <div className="flex w-[332px] flex-col gap-3">
-                  <h2 className="whitespace-nowrap text-[18px] font-semibold leading-6 text-[var(--text-primary)]">
-                    {t.auth.security.title}
-                  </h2>
+                  <div className="flex flex-col gap-3">
+                    <h2 className="text-[18px] font-semibold leading-6 text-[#0A0A0A]">
+                      {t.auth.security.title}
+                    </h2>
 
-                  <p className="w-[316px] text-[12px] font-medium leading-5 text-[var(--text-secondary)]">
-                    {t.auth.security.description}
-                  </p>
+                    <p className="w-[572px] text-[12px] font-medium leading-5 text-[#525252]">
+                      {t.auth.security.description}
+                    </p>
+                  </div>
                 </div>
               </div>
-
-              {/* Indicadores */}
-              <div className="flex shrink-0 items-start gap-[17px]">
-                <div className="flex w-[53px] flex-col items-center gap-[5px] text-center">
-                  <Image
-                    src="/moneypilot/security-privacy.svg"
-                    alt=""
-                    width={17}
-                    height={17}
-                  />
-                  <span className="text-[9px] font-medium leading-[14px] text-[var(--text-primary)]">
-                    {t.auth.security.privacy[0]}
-                    <br />
-                    {t.auth.security.privacy[1]}
-                  </span>
-                </div>
-
-                <div className="flex w-[53px] flex-col items-center gap-[5px] text-center">
-                  <Image
-                    src="/moneypilot/security-encryption.svg"
-                    alt=""
-                    width={17}
-                    height={17}
-                  />
-                  <span className="text-[9px] font-medium leading-[14px] text-[var(--text-primary)]">
-                    {t.auth.security.encryption[0]}
-                    <br />
-                    {t.auth.security.encryption[1]}
-                  </span>
-                </div>
-
-                <div className="flex w-[53px] flex-col items-center gap-[5px] text-center">
-                  <Image
-                    src="/moneypilot/security-control.svg"
-                    alt=""
-                    width={17}
-                    height={17}
-                  />
-                  <span className="text-[9px] font-medium leading-[14px] text-[var(--text-primary)]">
-                    {t.auth.security.control[0]}
-                    <br />
-                    {t.auth.security.control[1]}
-                  </span>
-                </div>
-
-                <div className="flex w-[53px] flex-col items-center gap-[5px] text-center">
-                  <Image
-                    src="/moneypilot/security-connection.svg"
-                    alt=""
-                    width={17}
-                    height={17}
-                  />
-                  <span className="text-[9px] font-medium leading-[14px] text-[var(--text-primary)]">
-                    {t.auth.security.connection[0]}
-                    <br />
-                    {t.auth.security.connection[1]}
-                  </span>
-                </div>
-              </div>
-            </div>
             </div>
           </div>
         </div>
@@ -246,7 +222,7 @@ const passwordStrength =
         {/* Painel do formulário */}
         <div className="relative h-full w-[55.2083%] bg-white">
           <div
-            className="absolute left-1/2 top-1/2 h-[690px] w-[560px] origin-center -translate-x-1/2 -translate-y-1/2 scale-[0.84] rounded-[24px] border-2 border-[var(--brand-secondary)] bg-white p-10 shadow-[0_8px_24px_rgba(0,18,26,0.08)]"
+            className="absolute left-1/2 top-1/2 h-[690px] w-[560px] origin-center -translate-x-1/2 -translate-y-1/2 scale-[0.84] rounded-[24px] border-2 border-[#38BDF8] bg-white p-10 shadow-[0_8px_24px_rgba(0,18,26,0.08)]"
           >
             <div
               className={`flex h-full flex-col ${
@@ -344,7 +320,7 @@ const passwordStrength =
                     className="shrink-0"
                   />
 
-                  <div className="text-[16px] font-medium leading-5 text-[var(--text-secondary)]">
+                  <div className="text-[16px] font-medium leading-5 text-[#0A9396]">
                     <p>
                       {t.auth.linkValidPrefix}{" "}
                       <span className="font-semibold text-[var(--text-primary)]">
@@ -359,69 +335,114 @@ const passwordStrength =
 
               {!isForgotPassword && !isVerifyEmail && !isResetPassword && (
   <>
-    {/* Abas */}
-    <div className="flex h-11 w-full gap-1 rounded-xl bg-[#fcfdfd] p-1">
-      <button
-        type="button"
-        onClick={() => setMode("signup")}
-        className={`flex h-9 flex-1 items-center justify-center rounded-[9px] text-[14px] font-medium ${
-          !isLogin
-            ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--text-secondary)]"
-        }`}
-      >
-        {t.auth.createAccount}
-      </button>
+                          {/* Abas */}
+                          <div className="flex h-11 w-full gap-1 rounded-xl bg-[#fcfdfd] p-1">
+                            <button
+                              type="button"
+                              onClick={() => setMode("signup")}
+                              className={`flex h-9 flex-1 items-center justify-center rounded-[9px] text-[14px] font-medium ${
+                                !isLogin
+                                  ? "bg-[#3B82F6] text-white"
+                                  : "text-[var(--text-secondary)]"
+                              }`}
+                            >
+                              {t.auth.createAccount}
+                            </button>
 
-      <button
-        type="button"
-        onClick={() => setMode("login")}
-        className={`flex h-9 flex-1 items-center justify-center rounded-[9px] text-[14px] font-medium ${
-          isLogin
-            ? "bg-[var(--brand-primary)] text-white"
-            : "text-[var(--text-secondary)]"
-        }`}
-      >
-        {t.auth.login}
-      </button>
-    </div>
-  </>
-)}
+                            <button
+                              type="button"
+                              onClick={() => setMode("login")}
+                              className={`flex h-9 flex-1 items-center justify-center rounded-[9px] text-[14px] font-medium ${
+                                isLogin
+                                  ? "bg-[#3B82F6] text-white"
+                                  : "text-[var(--text-secondary)]"
+                              }`}
+                            >
+                              {t.auth.login}
+                            </button>
+                          </div>
+                        </>
+                      )}
 
-              {!isForgotPassword && !isVerifyEmail && !isResetPassword && (
-                <form
-                  id="auth-credentials-form"
-                  action={isLogin ? signIn : signUp}
-                />
-              )}
-              {!isVerifyEmail && !isResetPassword && (
-  <>
-    {/* E-mail */}
-    <div className="flex flex-col gap-2">
-          <label
-            htmlFor="email"
-            className="text-[14px] font-medium text-[var(--text-primary)]"
-          >
-            {t.auth.email}
-          </label>
+                                    {!isForgotPassword && !isVerifyEmail && !isResetPassword && (
+                                      <form
+                                        id="auth-credentials-form"
+                                        action={isLogin ? signIn : signUp}
+                                      />
+                                    )}
+                                    {!isVerifyEmail && !isResetPassword && (
+                                      <>
+                                        {mode === "signup" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Nome */}
+                          <div className="flex flex-col gap-2">
+                            <label
+                              htmlFor="firstName"
+                              className="text-[14px] font-medium text-[var(--text-primary)]"
+                            >
+                              {t.auth.firstName}
+                            </label>
 
-          <input
-            id="email"
-            name="email"
-            type="email"
-            form={
-              !isForgotPassword && !isVerifyEmail && !isResetPassword
-                ? "auth-credentials-form"
-                : undefined
-            }
-            required={!isForgotPassword && !isVerifyEmail && !isResetPassword}
-            autoComplete="email"
-            placeholder={t.auth.emailPlaceholder}
-            className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
-          />
-        </div>
-      </>
-    )}
+                            <input
+                              id="firstName"
+                              name="firstName"
+                              type="text"
+                              form="auth-credentials-form"
+                              required
+                              autoComplete="given-name"
+                              placeholder={t.auth.firstNamePlaceholder}
+                              className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
+                            />
+                          </div>
+
+                          {/* Sobrenome */}
+                          <div className="flex flex-col gap-2">
+                            <label
+                              htmlFor="lastName"
+                              className="text-[14px] font-medium text-[var(--text-primary)]"
+                            >
+                              {t.auth.lastName}
+                            </label>
+
+                            <input
+                              id="lastName"
+                              name="lastName"
+                              type="text"
+                              form="auth-credentials-form"
+                              required
+                              autoComplete="family-name"
+                              placeholder={t.auth.lastNamePlaceholder}
+                              className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {/* E-mail */}
+                      <div className="flex flex-col gap-2">
+                            <label
+                              htmlFor="email"
+                              className="text-[14px] font-medium text-[var(--text-primary)]"
+                            >
+                              {t.auth.email}
+                            </label>
+
+                            <input
+                              id="email"
+                              name="email"
+                              type="email"
+                              form={
+                                !isForgotPassword && !isVerifyEmail && !isResetPassword
+                                  ? "auth-credentials-form"
+                                  : undefined
+                              }
+                              required={!isForgotPassword && !isVerifyEmail && !isResetPassword}
+                              autoComplete="email"
+                              placeholder={t.auth.emailPlaceholder}
+                              className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
+                            />
+                          </div>
+                        </>
+                      )}
 
               {!isForgotPassword && !isVerifyEmail && !isResetPassword && (
   <>
@@ -465,6 +486,12 @@ const passwordStrength =
   </button>
 </div>
     </div>
+
+    {isLogin && loginErrorMessage && (
+      <p role="alert" className="rounded-lg border border-[#F43F5E]/30 bg-[#F43F5E]/10 px-3 py-2 text-[12px] font-medium leading-5 text-[#C53030]">
+        {loginErrorMessage}
+      </p>
+    )}
 
     <button
       type="button"
@@ -640,7 +667,7 @@ const passwordStrength =
                     setMode("verify-email");
                   }
                 }}
-                className={`flex shrink-0 items-center justify-center bg-[var(--brand-primary)] font-medium text-white ${
+                className={`flex shrink-0 items-center justify-center bg-[#3B82F6] font-medium text-white ${
                   isResetPassword
                     ? "h-[56px] w-[480px] rounded-[8px] text-[16px] leading-5"
                     : "h-12 w-full rounded-lg text-[14px] leading-5"

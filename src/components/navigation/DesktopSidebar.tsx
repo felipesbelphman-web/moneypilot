@@ -4,125 +4,111 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import {
-  IconChartPie,
-  IconCreditCard,
-  IconSettings,
-  IconSmartHome,
-  IconSparkles,
-} from "@tabler/icons-react"; 
 import { signOut } from "@/app/auth/actions";
-import { LeaderboardStar } from "iconoir-react";
+import { useLanguage } from "@/components/LanguageProvider";
+import { useTheme } from "@/components/ThemeProvider";
+import { translations } from "@/i18n/translations";
 
 type SidebarIconName =
-  | "home"
-  | "card"
-  | "chart"
-  | "sparkles"
-  | "goals"
-  | "investments"
-  | "settings"
-  | "help";
-
-const navigationItems: { name: SidebarIconName; label: string; href?: string }[] = [
-  { name: "home", label: "Dashboard", href: "/dashboard" },
-  { name: "card", label: "Transações", href: "/transactions" },
-  { name: "chart", label: "Orçamentos", href: "/budgets" },
-  { name: "sparkles", label: "Insights IA", href: "/insights" },
-  { name: "goals", label: "Objetivos", href: "/goals" },
-  { name: "investments", label: "Investimentos", href: "/investments" },
-  { name: "settings", label: "Configurações", href: "/settings" },
-  { name: "help", label: "Ajuda" },
-];
+  | "home" | "transactions" | "budgets" | "insights" | "goals"
+  | "investments" | "settings" | "help" | "logout";
 
 const desktopRoutes = [
-  "/dashboard",
-  "/transactions",
-  "/budgets",
-  "/insights",
-  "/goals",
-  "/categories",
-  "/investments",
-  "/settings",
+  "/dashboard", "/transactions", "/budgets", "/insights", "/goals",
+  "/categories", "/investments", "/settings",
 ];
 
-function InvestmentIcon() {
+const iconPaths: Record<SidebarIconName, string> = {
+  home: "/moneypilot/navigation/home.svg",
+  transactions: "/moneypilot/navigation/transactions.svg",
+  budgets: "/moneypilot/navigation/budgets.svg",
+  insights: "/moneypilot/navigation/insights.svg",
+  goals: "/moneypilot/navigation/goals.svg",
+  investments: "/moneypilot/navigation/investments.svg",
+  settings: "/moneypilot/navigation/settings.svg",
+  help: "/moneypilot/navigation/help-icon.svg",
+  logout: "/moneypilot/navigation/logout-icon.svg",
+};
+
+function SidebarIcon({ name }: { name: SidebarIconName }) {
+  const icon = iconPaths[name];
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M9 12V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M15 12V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 12V11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M3 4H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 4V14C4 14.5304 4.21071 15.0391 4.58579 15.4142C4.96086 15.7893 5.46957 16 6 16H18C18.5304 16 19.0391 15.7893 19.4142 15.4142C19.7893 15.0391 20 14.5304 20 14V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 16V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 20H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <span
+      aria-hidden="true"
+      className="size-[24px] shrink-0 bg-current"
+      style={{
+        WebkitMaskImage: `url("${icon}")`,
+        maskImage: `url("${icon}")`,
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+      }}
+    />
   );
 }
 
-function SidebarIcon({ name }: { name: SidebarIconName }) {
-  switch (name) {
-    case "home": return <IconSmartHome size={24} stroke={2} />;
-    case "card": return <IconCreditCard size={24} stroke={2} />;
-    case "chart": return <IconChartPie size={24} stroke={2} />;
-    case "sparkles": return <IconSparkles size={24} stroke={2} />;
-    case "goals": return <LeaderboardStar width={24} height={24} strokeWidth={2} aria-hidden="true" />;
-    case "investments": return <InvestmentIcon />;
-    case "settings": return <IconSettings size={24} stroke={2} />;
-    case "help":
-      return (
-        <Image
-          src="/moneypilot/navigation/help-icon.svg"
-          alt=""
-          width={24}
-          height={24}
-        />
-      );
-  }
+function routeIsActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function DesktopSidebar() {
+  const { language } = useLanguage();
+  const { theme, setTheme } = useTheme();
+  const t = translations[language].appNavigation;
   const pathname = usePathname();
-  const isDesktopRoute = desktopRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
+  const navigationItems: { name: SidebarIconName; label: string; href?: string }[] = [
+    { name: "home", label: t.dashboard, href: "/dashboard" },
+    { name: "transactions", label: t.transactions, href: "/transactions" },
+    { name: "budgets", label: t.budgets, href: "/budgets" },
+    { name: "insights", label: t.insights, href: "/insights" },
+    { name: "goals", label: t.goals, href: "/goals" },
+    { name: "investments", label: t.investments, href: "/investments" },
+    { name: "settings", label: t.settings, href: "/settings" },
+    { name: "help", label: t.help },
+  ];
+  const isDesktopRoute = desktopRoutes.some((route) => routeIsActive(pathname, route));
 
   if (!isDesktopRoute) return null;
 
   return (
     <aside
-  data-desktop-sidebar="true"
-  className="pointer-events-auto fixed left-[141px] top-1/2 z-[50] flex h-[562px] w-[66px] -translate-y-1/2 flex-col items-center justify-center gap-[32px] rounded-[33px] border border-[#28313B]/15 bg-[#0D1117]/50 px-[8px] py-[32px] text-[#D9E0E7] shadow-[0_12px_24px_rgba(0,0,0,0.35)] backdrop-blur-[20px]">
+      data-desktop-sidebar="true"
+      aria-label={t.navigation}
+      className="pointer-events-auto fixed left-[141px] top-1/2 z-[50] hidden h-[720px] w-[66px] -translate-y-1/2 flex-col items-center justify-center gap-[32px] overflow-hidden rounded-[33px] border border-[var(--border-default)] bg-[var(--background-sidebar)] px-[8px] py-[32px] text-[var(--sidebar-icon)] shadow-[var(--sidebar-shadow)] backdrop-blur-[12px] min-[900px]:flex"
+    >
       {navigationItems.map((item) => {
-        const active = item.href === pathname;
-        const className = `flex pointer-events-auto h-[48px] w-[48px] shrink-0 items-center justify-center transition-colors ${active ? "rounded-full bg-[#3B82F6] text-white" : "-my-[12px] rounded-full text-[#D9E0E7] hover:text-white"}`;
+        const active = item.href ? routeIsActive(pathname, item.href) : false;
+        const className = `sidebar-navigation-item flex shrink-0 items-center justify-center rounded-full transition-[color,background-color,box-shadow] ${active ? "is-active size-[46px] bg-[var(--brand-secondary)] text-white shadow-[0_6px_14px_rgba(37,99,235,0.28)]" : "size-[24px] text-[var(--sidebar-icon)] hover:text-[var(--text-primary)]"}`;
         const content = <SidebarIcon name={item.name} />;
 
-        return item.href ? <Link key={item.name} href={item.href} aria-label={item.label} className={className}>{content}</Link> : <button key={item.name} type="button" aria-label={item.label} className={className}>{content}</button>;
+        return item.href ? (
+          <Link key={item.name} href={item.href} aria-label={item.label} aria-current={active ? "page" : undefined} title={item.label} className={className}>
+            {content}
+          </Link>
+        ) : (
+          <button key={item.name} type="button" aria-label={item.label} title={item.label} className={className}>
+            {content}
+          </button>
+        );
       })}
-      <form action={signOut} className="-my-[12px]">
-        <button
-          type="submit"
-          aria-label="Sair"
-          title="Sair"
-          className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full text-[#D9E0E7] transition-colors hover:text-white"
-        >
-          <span
-            aria-hidden="true"
-            className="h-[24px] w-[24px] bg-current"
-            style={{
-              WebkitMaskImage: "url('/moneypilot/navigation/logout-icon.svg')",
-              maskImage: "url('/moneypilot/navigation/logout-icon.svg')",
-              WebkitMaskRepeat: "no-repeat",
-              maskRepeat: "no-repeat",
-              WebkitMaskPosition: "center",
-              maskPosition: "center",
-              WebkitMaskSize: "contain",
-              maskSize: "contain",
-            }}
-          />
+
+      <form action={signOut} className="flex size-[24px] shrink-0">
+        <button type="submit" aria-label={t.logout} title={t.logout} className="sidebar-navigation-item flex size-[24px] items-center justify-center rounded-full text-[var(--sidebar-icon)] transition-colors hover:text-[var(--text-primary)]">
+          <SidebarIcon name="logout" />
         </button>
       </form>
+
+      <div role="group" aria-label={t.theme} className="flex h-[128px] w-[48px] shrink-0 flex-col items-center justify-center gap-[24px] overflow-hidden rounded-[44px] border-4 border-[var(--theme-switch-surface)] bg-[var(--theme-switch-surface)] px-[2px] py-[12px]">
+        <button type="button" onClick={() => setTheme("dark")} aria-label={t.darkTheme} aria-pressed={theme === "light"} title={t.darkTheme} className={`theme-option grid size-[36px] shrink-0 place-items-center rounded-full ${theme === "light" ? "is-selected" : "opacity-40"}`}>
+          <Image src="/moneypilot/navigation/moon.svg" alt="" width={20} height={20} className="size-[19.636px]" />
+        </button>
+        <button type="button" onClick={() => setTheme("light")} aria-label={t.lightTheme} aria-pressed={theme === "dark"} title={t.lightTheme} className={`theme-option grid size-[36px] shrink-0 place-items-center rounded-full ${theme === "dark" ? "is-selected" : "opacity-40"}`}>
+          <Image src="/moneypilot/navigation/sun.svg" alt="" width={20} height={20} className="size-[19.636px]" />
+        </button>
+      </div>
     </aside>
   );
 }

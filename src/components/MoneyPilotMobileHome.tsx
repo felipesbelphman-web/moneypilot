@@ -16,6 +16,7 @@ import AnimatedExpenseCategories from "@/components/AnimatedExpenseCategories";
 import LanguageSelector from "@/components/LanguageSelector";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
+import { ThemeLogo } from "@/components/ThemeLogo";
 
 const benefitIcons = [
   "/moneypilot/icon-pie-chart.svg",
@@ -33,13 +34,7 @@ export default function MoneyPilotMobileHome() {
       <section className="flex flex-col gap-6 px-6 py-12">
         {/* Logo + idioma */}
         <div className="flex w-full items-center justify-between">
-          <Image
-            src="/moneypilot/moneypilot-logo.svg"
-            alt="MoneyPilot"
-            width={232}
-            height={48}
-            priority
-          />
+          <ThemeLogo priority />
 
           <LanguageSelector />
         </div>
@@ -274,38 +269,21 @@ export default function MoneyPilotMobileHome() {
         </article>
 </div>
           {/* CTA final */}
-<section className="relative h-[521px] w-full overflow-hidden">
-  {/* Foto de fundo */}
-  <Image
-    src="/moneypilot/cta-final-bg.png"
-    alt={t.dashboard.visualAlt}
-    fill
-    className="object-cover"
-    sizes="440px"
-  />
-
-  {/* Overlay escuro */}
-  <div className="absolute inset-0 bg-black/25" />
+<section className="relative h-[521px] w-full overflow-hidden bg-[var(--background-secondary)]">
 
   {/* Container */}
   <div className="relative z-10 flex h-full w-full items-center justify-center p-3">
-    <div className="flex w-full max-w-[394px] flex-col gap-6 rounded-[22px] border-[1.5px] border-[#dde5e5] bg-white/10 p-6">
+    <div className="flex w-full max-w-[394px] flex-col gap-6 rounded-[22px] border-[1.5px] border-[var(--border-default)] bg-[var(--background-elevated)] p-6 shadow-[var(--shadow-card)]">
       {/* Logo */}
-      <Image
-        src="/moneypilot/moneypilot-logo.svg"
-        alt="MoneyPilot"
-        width={232}
-        height={48}
-        className="brightness-0 invert"
-      />
+      <ThemeLogo />
 
       {/* Headline */}
-      <h2 className="text-[30px] font-semibold leading-[34px] tracking-[-0.6px] text-white">
+      <h2 className="text-[30px] font-semibold leading-[34px] tracking-[-0.6px] text-[var(--text-primary)]">
         {t.finalCta.title}
       </h2>
 
       {/* Texto */}
-      <p className="text-[16px] font-medium leading-5 text-white">
+      <p className="text-[16px] font-medium leading-5 text-[var(--text-secondary)]">
         {t.finalCta.description}
       </p>
 

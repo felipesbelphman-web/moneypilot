@@ -33,6 +33,30 @@ const languages: {
     flag: "/moneypilot/language-spain.svg",
     flagAlt: "Español",
   },
+  {
+    code: "de",
+    label: "DE",
+    flag: "/moneypilot/language-germany.svg",
+    flagAlt: "Deutsch",
+  },
+  {
+    code: "fr",
+    label: "FR",
+    flag: "/moneypilot/language-france.svg",
+    flagAlt: "Français",
+  },
+  {
+    code: "nl",
+    label: "NL",
+    flag: "/moneypilot/language-netherlands.svg",
+    flagAlt: "Nederlands",
+  },
+  {
+    code: "it",
+    label: "IT",
+    flag: "/moneypilot/language-italy.svg",
+    flagAlt: "Italiano",
+  },
 ];
 
 function UsaFlag() {
@@ -210,22 +234,16 @@ export default function LanguageSelector() {
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-[38px] w-[132px] overflow-hidden rounded-xl border border-[#dce5e5] bg-white p-1 shadow-[0_8px_24px_rgba(0,18,25,0.12)]"
+          className="absolute right-0 top-[38px] flex w-[93px] flex-col gap-5 bg-white py-[6px]"
         >
-          {languages.map((item) => {
-            const isSelected = item.code === language;
-
+          {languages.filter((item) => item.code !== language).map((item) => {
             return (
               <button
                 key={item.code}
                 type="button"
                 role="menuitem"
                 onClick={() => handleLanguageChange(item.code)}
-                className={`flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors ${
-                  isSelected
-                    ? "bg-[#edf7f7]"
-                    : "bg-white hover:bg-[#f7f9f9]"
-                }`}
+                className="flex h-6 w-full items-center gap-3 bg-white text-left transition-opacity hover:opacity-65"
               >
                 <LanguageFlag
                   language={item.code}
@@ -233,13 +251,7 @@ export default function LanguageSelector() {
                   src={item.flag}
                 />
 
-                <span
-                  className={`text-[16px] font-medium leading-5 ${
-                    isSelected
-                      ? "text-[var(--brand-primary)]"
-                      : "text-[var(--text-primary)]"
-                  }`}
-                >
+                <span className="text-[18px] font-medium leading-6 text-[var(--text-primary)]">
                   {item.label}
                 </span>
               </button>

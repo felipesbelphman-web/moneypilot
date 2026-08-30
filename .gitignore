@@ -41,3 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 .vscode/
+
+# local audit and tool artifacts
+/supabase/.temp/
+/build_output.txt
+/landing-correction-fr-1920x865.png
+/landing-final-1920x865.png
+/6D.3D.1-FINAL-REPORT.md

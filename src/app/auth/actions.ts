@@ -7,12 +7,16 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export async function signUp(formData: FormData) {
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) {
-  redirect("/auth?mode=signup&error=missing-fields");
-}
+  const displayName = `${firstName} ${lastName}`.trim();
+
+  if (!firstName || !lastName || !email || !password) {
+    redirect("/auth?mode=signup&error=missing-fields");
+  }
 
   const requestHeaders = await headers();
   const origin = requestHeaders.get("origin") ?? "http://localhost:3000";
@@ -24,6 +28,9 @@ export async function signUp(formData: FormData) {
     password,
     options: {
       emailRedirectTo: `${origin}/auth/confirm`,
+      data: {
+        display_name: displayName,
+      },
     },
   });
 
@@ -51,16 +58,34 @@ export async function signIn(formData: FormData) {
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  email,
+  password,
+});
 
-  if (error) {
-    redirect("/auth?mode=login&error=invalid-credentials");
+if (error) {
+  redirect(`/auth?mode=login&error=${classifySignInError(error)}`);
+}
+
+revalidatePath("/", "layout");
+redirect("/dashboard");
+}
+
+function classifySignInError(error: { code?: string; name: string; status?: number }) {
+  if (error.code === "invalid_credentials") {
+    return "invalid-credentials";
   }
 
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  if (
+    error.name === "AuthRetryableFetchError" ||
+    error.status === 0 ||
+    error.status === 429 ||
+    (error.status !== undefined && error.status >= 500) ||
+    error.code === "request_timeout"
+  ) {
+    return "auth-unavailable";
+  }
+
+  return "auth-error";
 }
 
 export async function signOut() {

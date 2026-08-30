@@ -2,6 +2,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
+import { ThemeLogo } from "@/components/ThemeLogo";
+import { signIn, signUp } from "@/app/auth/actions";
 
 type MoneyPilotMobileAuthProps = {
   isLogin?: boolean;
@@ -71,54 +73,25 @@ const passwordStrength =
   return (
     <div className="w-[440px] bg-white">
       {/* Hero / Foto da casa */}
-      <section className="relative h-[820px] w-[440px] overflow-hidden px-6 py-12">
-        {/* Background */}
-        <Image
-            src={
-            isResetPassword
-                ? "/moneypilot/auth-reset-password-bg.png"
-                : isVerifyEmail
-                ? "/moneypilot/auth-verify-email-bg.png"
-                : isForgotPassword
-                    ? "/moneypilot/auth-forgot-password-bg.png"
-                    : isLogin
-                    ? "/moneypilot/auth-login-bg.png"
-                    : "/moneypilot/auth-signup-bg.png"
-            }
-          alt=""
-          fill
-          priority
-          className="object-cover object-center"
-          sizes="440px"
-        />
-
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/25" />
+      <section className="relative h-[820px] w-[440px] overflow-hidden bg-[var(--background-secondary)] px-6 py-12">
 
         {/* Conteúdo */}
         <div className="relative z-10 flex h-full flex-col justify-between">
           {/* Logo */}
           <div className="flex h-12 items-center">
-            <Image
-                src="/moneypilot/moneypilot-logo-white.svg"
-                alt="MoneyPilot"
-                width={220}
-                height={48}
-                priority
-                className="h-12 w-auto"
-            />
+            <ThemeLogo width={220} priority className="h-12 w-auto" />
             </div>
 
           {/* Conteúdo inferior */}
           <div className="flex flex-col gap-9">
             {/* Texto */}
             <div className="flex flex-col gap-3">
-                <h1 className="text-[30px] font-semibold leading-[38px] text-white">
+                <h1 className="text-[30px] font-semibold leading-[38px] text-[var(--text-primary)]">
                 {hero.titleLines.map((line) => (
                   <span key={line} className="block whitespace-nowrap">{line}</span>
                 ))}
                 </h1>
-              <p className="text-[18px] font-medium leading-6 text-[#c3cfcf]">
+              <p className="text-[18px] font-medium leading-6 text-[var(--text-secondary)]">
                 {hero.description}
                 </p>
             </div>
@@ -596,7 +569,7 @@ const passwordStrength =
           </div>
         ) : (
           /* Card Login / Criar conta atual */
-          <div className="flex w-[392px] flex-col gap-5 rounded-[20px] border-[1.6px] border-[var(--brand-secondary)] bg-white px-3 py-6 shadow-[0_8px_24px_rgba(0,18,26,0.08)]">
+          <form action={isLogin ? signIn : signUp} className="flex w-[392px] flex-col gap-5 rounded-[20px] border-[1.6px] border-[var(--brand-secondary)] bg-white px-3 py-6 shadow-[0_8px_24px_rgba(0,18,26,0.08)]">
             {/* Eyebrow */}
             <p className="text-[12px] font-semibold leading-[17px] tracking-[0.96px] text-[var(--brand-secondary)]">
               {t.auth.eyebrow.welcome}
@@ -629,6 +602,48 @@ const passwordStrength =
               </button>
             </div>
 
+            {!isLogin && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="mobile-signup-first-name"
+                    className="text-[14px] font-medium text-[var(--text-primary)]"
+                  >
+                    {t.auth.firstName}
+                  </label>
+
+                  <input
+                    id="mobile-signup-first-name"
+                    name="firstName"
+                    type="text"
+                    required
+                    autoComplete="given-name"
+                    placeholder={t.auth.firstNamePlaceholder}
+                    className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="mobile-signup-last-name"
+                    className="text-[14px] font-medium text-[var(--text-primary)]"
+                  >
+                    {t.auth.lastName}
+                  </label>
+
+                  <input
+                    id="mobile-signup-last-name"
+                    name="lastName"
+                    type="text"
+                    required
+                    autoComplete="family-name"
+                    placeholder={t.auth.lastNamePlaceholder}
+                    className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* E-mail */}
             <div className="flex flex-col gap-2">
               <label
@@ -640,7 +655,10 @@ const passwordStrength =
 
               <input
                 id="mobile-signup-email"
+                name="email"
                 type="email"
+                required
+                autoComplete="email"
                 placeholder={t.auth.emailPlaceholder}
                 className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
               />
@@ -657,7 +675,10 @@ const passwordStrength =
 
               <input
                 id="mobile-signup-password"
+                name="password"
                 type="password"
+                required
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 placeholder={t.auth.passwordPlaceholder}
                 className="h-12 w-full rounded-lg border border-[var(--border-default)] px-4 text-[14px] outline-none placeholder:text-[var(--text-tertiary)]"
               />
@@ -674,7 +695,7 @@ const passwordStrength =
 
             {/* Criar conta */}
             <button
-              type="button"
+              type="submit"
               className="flex h-12 w-full items-center justify-center rounded-lg bg-[var(--brand-primary)] text-[14px] font-medium text-white"
             >
               {isLogin ? t.auth.login : t.auth.createAccount}
@@ -711,6 +732,7 @@ const passwordStrength =
             {/* Login */}
             <button
               type="button"
+              onClick={isLogin ? onSignup : onLogin}
               className="w-full text-center text-[13px] font-medium leading-5 text-[var(--text-secondary)]"
             >
               {isLogin ? t.auth.noAccount : t.auth.alreadyHaveAccount}{" "}
@@ -718,7 +740,7 @@ const passwordStrength =
                 {isLogin ? t.auth.createAccount : t.auth.login}
               </span>
             </button>
-          </div>
+          </form>
         )}
       </section>
     </div>

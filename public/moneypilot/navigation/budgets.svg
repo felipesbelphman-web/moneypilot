@@ -1,0 +1,18 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon Hero">
+<g id="Icon">
+<path d="M11.9161 3C6.90085 3.55441 3 7.80635 3 12.9694C3 18.5091 7.49086 23 13.0306 23C18.1936 23 22.4456 19.0992 23 14.0839H11.9161V3Z" stroke="url(#paint0_linear_0_99)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M22.4904 9.62585H16.3741V3.50974C19.2242 4.51708 21.483 6.77587 22.4904 9.62585Z" stroke="url(#paint1_linear_0_99)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_99" x1="13" y1="3" x2="13" y2="23" gradientUnits="userSpaceOnUse">
+<stop stop-color="#3B3B3E"/>
+<stop offset="1" stop-color="#252526"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_99" x1="13" y1="3" x2="13" y2="23" gradientUnits="userSpaceOnUse">
+<stop stop-color="#3B3B3E"/>
+<stop offset="1" stop-color="#252526"/>
+</linearGradient>
+</defs>
+</svg>
