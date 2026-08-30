@@ -28,7 +28,7 @@ const actionIcons = ["insight-blue.svg", "insight-green.svg", "insight-teal.svg"
 export default function GoalsPage() {
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
-  const { goals, setGoals, goalContributionPlans, setGoalContributionPlans, budgets, transactions, budgetAdjustments } = useFinanceData();
+  const { goals, goalContributionPlans, budgets, transactions, budgetAdjustments, upsertGoal, deleteGoal, upsertGoalContributionPlan } = useFinanceData();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [modal, setModal] = useState<{ mode: "create" } | { mode: "edit"; goalId: string } | null>(null);
   const [deleteGoalId, setDeleteGoalId] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export default function GoalsPage() {
   const primaryGoal = selectPrimaryGoal(goals);
   const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) ?? primaryGoal;
   const editedGoal = modal?.mode === "edit" ? goals.find((goal) => goal.id === modal.goalId) : undefined;
-  const deleteGoal = goals.find((goal) => goal.id === deleteGoalId);
+  const goalToDelete = goals.find((goal) => goal.id === deleteGoalId);
   const planGoal = goals.find((goal) => goal.id === planGoalId);
   const planCalculation = planGoal ? calculateGoal(planGoal) : null;
   const primaryCalculation = primaryGoal ? calculateGoal(primaryGoal) : null;
@@ -81,34 +81,49 @@ export default function GoalsPage() {
   const impactCopy = availableCapacity > 0 ? `${dynamic.directing} ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}.` : dynamic.noImpact;
   const nextBestActions = primaryGoal ? actionIcons.map((icon, index) => ({ text: [liveContributionCopy, capacityContextCopy, impactCopy][index], icon })) : [];
 
-  function createGoal(values: Omit<Goal, "id">) {
+  async function createGoal(values: Omit<Goal, "id">) {
     const goal = { ...values, id: crypto.randomUUID() };
-    setGoals((current) => [...current, goal]);
-    setSelectedGoalId(goal.id);
-    setModal(null);
+    try {
+      const confirmed = await upsertGoal(goal);
+      setSelectedGoalId(confirmed.id);
+      setModal(null);
+    } catch (error) {
+      console.error("Failed to create goal:", error);
+    }
   }
 
-  function editGoal(values: Omit<Goal, "id">) {
+  async function editGoal(values: Omit<Goal, "id">) {
     if (!editedGoal) return;
-    setGoals((current) => current.map((goal) => goal.id === editedGoal.id ? { ...values, id: goal.id } : goal));
-    setModal(null);
+    try {
+      await upsertGoal({ ...values, id: editedGoal.id });
+      setModal(null);
+    } catch (error) {
+      console.error("Failed to update goal:", error);
+    }
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deleteGoalId) return;
-    setGoals((current) => current.filter((goal) => goal.id !== deleteGoalId));
-    setGoalContributionPlans((current) => { const next = { ...current }; delete next[deleteGoalId]; return next; });
-    if (selectedGoalId === deleteGoalId) setSelectedGoalId(null);
-    setDeleteGoalId(null);
+    try {
+      await deleteGoal(deleteGoalId);
+      if (selectedGoalId === deleteGoalId) setSelectedGoalId(null);
+      setDeleteGoalId(null);
+    } catch (error) {
+      console.error("Failed to delete goal:", error);
+    }
   }
 
-  function applySavingsPlan() {
+  async function applySavingsPlan() {
     if (!planGoal || !planCalculation || planCalculation.isCompleted || planCalculation.isPastDue || planCalculation.requiredMonthlyContribution === null || planCalculation.requiredMonthlyContribution <= 0 || savingsCapacity.safeMonthlyCapacity <= 0) return;
     const monthlyTarget = planCalculation.requiredMonthlyContribution + savingsCapacity.safeMonthlyCapacity;
     if (!Number.isFinite(monthlyTarget) || monthlyTarget <= 0) return;
-    setGoalContributionPlans((current) => ({ ...current, [planGoal.id]: { goalId: planGoal.id, monthlyTarget, baselineRequiredMonthlyContribution: planCalculation.requiredMonthlyContribution as number, savingsBoost: savingsCapacity.safeMonthlyCapacity, createdAt: new Date().toISOString() } }));
-    setFeedback(`Savings plan applied · ${money(monthlyTarget)}/month target`);
-    setPlanGoalId(null);
+    try {
+      await upsertGoalContributionPlan({ goalId: planGoal.id, monthlyTarget, baselineRequiredMonthlyContribution: planCalculation.requiredMonthlyContribution, savingsBoost: savingsCapacity.safeMonthlyCapacity, createdAt: new Date().toISOString() });
+      setFeedback(`Savings plan applied · ${money(monthlyTarget)}/month target`);
+      setPlanGoalId(null);
+    } catch (error) {
+      console.error("Failed to save goal contribution plan:", error);
+    }
   }
   return (
     <main className="min-h-screen overflow-hidden bg-[#080B0F] text-[#F5F7FA]">
@@ -144,7 +159,7 @@ export default function GoalsPage() {
       </DesktopScaleCanvas>
       {modal?.mode === "create" && <GoalModal mode="create" goals={goals} onClose={() => setModal(null)} onSubmit={createGoal} />}
       {modal?.mode === "edit" && editedGoal && <GoalModal mode="edit" goal={editedGoal} goals={goals} onClose={() => setModal(null)} onSubmit={editGoal} onRequestDelete={() => { setDeleteGoalId(editedGoal.id); setModal(null); }} />}
-      {deleteGoal && <DeleteGoalModal goal={deleteGoal} language={language} onClose={() => setDeleteGoalId(null)} onConfirm={confirmDelete} />}
+      {goalToDelete && <DeleteGoalModal goal={goalToDelete} language={language} onClose={() => setDeleteGoalId(null)} onConfirm={confirmDelete} />}
       {planGoal && planCalculation && <GoalSavingsPlanModal goal={planGoal} calculation={planCalculation} savingsBoost={savingsCapacity.safeMonthlyCapacity} existingPlan={goalContributionPlans[planGoal.id]} language={language} onClose={() => setPlanGoalId(null)} onApply={applySavingsPlan} />}
       {feedback && <div role="status" className="fixed bottom-[28px] left-1/2 z-[70] -translate-x-1/2 rounded-[18px] border border-[#22C55E]/30 bg-[var(--background-elevated)] px-[22px] py-[10px] text-[10px] font-semibold text-[#22C55E] shadow-lg">{feedback}</div>}
     </main>
