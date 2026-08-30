@@ -41,7 +41,7 @@ export default function BudgetsPage() {
   const { formatMoney: money } = useCurrency();
   const t = translations[language].appBudgets;
   const content = translations[language].appBudgetsContent;
-  const { budgets, setBudgets, transactions, budgetAdjustments, setBudgetAdjustment, goals } = useFinanceData();
+  const { budgets, transactions, budgetAdjustments, goals, upsertBudget, deleteBudget, upsertBudgetAdjustment } = useFinanceData();
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("2026-08");
   const [modalState, setModalState] = useState<BudgetModalState | null>(null);
@@ -93,9 +93,34 @@ export default function BudgetsPage() {
               </div>
             </section>
 
-            {modalState && <BudgetModal state={modalState} month={month} budgets={budgets} categories={content.categories} onSubmit={(budget) => { setBudgets((current) => modalState.mode === "create" ? [budget, ...current] : current.map((item) => item.id === budget.id ? budget : item)); setQuery(""); setOpenMenu(null); setModalState(null); }} onClose={() => setModalState(null)} />}
-            {deleteBudgetId && (() => { const selected = budgetsWithProgress.find((budget) => budget.id === deleteBudgetId); return selected ? <DeleteBudgetModal budget={selected} onClose={() => setDeleteBudgetId(null)} onConfirm={() => { setBudgets((current) => current.filter((budget) => budget.id !== deleteBudgetId)); setOpenMenu(null); setDeleteBudgetId(null); }} /> : null; })()}
-            {projectionModal && <BudgetProjectionModal view={projectionModal} month={month} projection={projection} adjustment={budgetAdjustments[month]} onClose={() => setProjectionModal(null)} onBack={() => setProjectionModal("projection")} onReview={() => setProjectionModal("adjustment")} onApply={(adjustment) => { setBudgetAdjustment(adjustment); setProjectionModal(null); setAdjustmentFeedback(true); }} />}
+            {modalState && <BudgetModal state={modalState} month={month} budgets={budgets} categories={content.categories} onSubmit={async (budget) => {
+              try {
+                await upsertBudget(budget);
+                setQuery("");
+                setOpenMenu(null);
+                setModalState(null);
+              } catch (error) {
+                console.error("Failed to save budget:", error);
+              }
+            }} onClose={() => setModalState(null)} />}
+            {deleteBudgetId && (() => { const selected = budgetsWithProgress.find((budget) => budget.id === deleteBudgetId); return selected ? <DeleteBudgetModal budget={selected} onClose={() => setDeleteBudgetId(null)} onConfirm={async () => {
+              try {
+                await deleteBudget(deleteBudgetId);
+                setOpenMenu(null);
+                setDeleteBudgetId(null);
+              } catch (error) {
+                console.error("Failed to delete budget:", error);
+              }
+            }} /> : null; })()}
+            {projectionModal && <BudgetProjectionModal view={projectionModal} month={month} projection={projection} adjustment={budgetAdjustments[month]} onClose={() => setProjectionModal(null)} onBack={() => setProjectionModal("projection")} onReview={() => setProjectionModal("adjustment")} onApply={async (adjustment) => {
+              try {
+                await upsertBudgetAdjustment(adjustment);
+                setProjectionModal(null);
+                setAdjustmentFeedback(true);
+              } catch (error) {
+                console.error("Failed to save budget adjustment:", error);
+              }
+            }} />}
             {adjustmentFeedback && budgetAdjustments[month] && <div role="status" className="absolute bottom-[56px] left-1/2 z-[75] -translate-x-1/2 rounded-[14px] border border-[#174D32] bg-[var(--surface-green-subtle)] px-[18px] py-[10px] text-[10px] shadow-xl"><strong className="text-[#22C55E]">{language === "pt" ? "Ajuste aplicado" : language === "es" ? "Ajuste aplicado" : "Adjustment applied"}</strong><span className="ml-[8px] text-[var(--text-tertiary)]">{language === "pt" ? "Sua meta restante é" : language === "es" ? "Tu objetivo restante es" : "Your remaining spending target is"} {money(budgetAdjustments[month].targetRemainingSpend)}.</span><button type="button" onClick={() => setAdjustmentFeedback(false)} aria-label={t.close} className="ml-[12px] text-[var(--text-tertiary)]"><IconX size={14} /></button></div>}
           </main>
         </DesktopScaleCanvas>
