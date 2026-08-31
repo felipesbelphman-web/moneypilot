@@ -1,6 +1,7 @@
 import type { Budget, BudgetAdjustment } from "@/components/budgets/budget-model";
 import type { GoalContributionPlan } from "@/components/goals/goal-contribution-plan";
 import type { Goal, GoalPriority } from "@/components/goals/goal-model";
+import type { Investment, InvestmentAssetType, InvestmentPriceMode } from "@/components/investments/investment-model";
 import type { Transaction, TransactionType } from "@/components/transactions/transaction-model";
 import type { FinanceUserId } from "@/lib/persistence/finance-persistence-model";
 
@@ -16,6 +17,8 @@ export type GoalRow = RowMetadata & { id: string; name: string; target_amount: n
 export type GoalInsert = Omit<GoalRow, "created_at" | "updated_at">;
 export type GoalContributionPlanRow = RowMetadata & { goal_id: string; monthly_target: number; baseline_required_monthly_contribution: number; savings_boost: number };
 export type GoalContributionPlanInsert = Omit<GoalContributionPlanRow, "updated_at">;
+export type InvestmentRow = RowMetadata & { id: string; name: string; symbol: string | null; asset_type: InvestmentAssetType; quantity: number; average_purchase_price: number; price_mode: InvestmentPriceMode; manual_current_price: number | null; market_asset_key: string | null; native_currency: string };
+export type InvestmentInsert = Omit<InvestmentRow, "created_at" | "updated_at">;
 
 export function transactionRowToDomain(row: TransactionRow): Transaction {
   return { id: row.id, description: row.description, category: row.category, categoryColor: row.category_color, payment: row.payment, date: row.date, dateISO: row.date_iso, origin: row.origin, type: row.type, amount: row.amount };
@@ -57,6 +60,14 @@ export function goalContributionPlanToRow(userId: FinanceUserId, plan: GoalContr
   return { user_id: userId, goal_id: plan.goalId, monthly_target: plan.monthlyTarget, baseline_required_monthly_contribution: plan.baselineRequiredMonthlyContribution, savings_boost: plan.savingsBoost, created_at: plan.createdAt };
 }
 
+export function investmentRowToDomain(row: InvestmentRow): Investment {
+  return { id: row.id, name: row.name, symbol: row.symbol, assetType: row.asset_type, quantity: row.quantity, averagePurchasePrice: row.average_purchase_price, priceMode: row.price_mode, manualCurrentPrice: row.manual_current_price, marketAssetKey: row.market_asset_key, nativeCurrency: row.native_currency };
+}
+
+export function investmentToRow(userId: FinanceUserId, investment: Investment): InvestmentInsert {
+  return { user_id: userId, id: investment.id, name: investment.name, symbol: investment.symbol, asset_type: investment.assetType, quantity: investment.quantity, average_purchase_price: investment.averagePurchasePrice, price_mode: investment.priceMode, manual_current_price: investment.manualCurrentPrice, market_asset_key: investment.marketAssetKey, native_currency: investment.nativeCurrency };
+}
+
 type TableDefinition<Row, Insert> = { Row: Row; Insert: Insert; Update: Partial<Insert>; Relationships: [] };
 
 export type FinanceDatabase = {
@@ -67,6 +78,7 @@ export type FinanceDatabase = {
       budget_adjustments: TableDefinition<BudgetAdjustmentRow, BudgetAdjustmentInsert>;
       goals: TableDefinition<GoalRow, GoalInsert>;
       goal_contribution_plans: TableDefinition<GoalContributionPlanRow, GoalContributionPlanInsert>;
+      investments: TableDefinition<InvestmentRow, InvestmentInsert>;
     };
     Views: Record<never, never>;
     Functions: Record<never, never>;

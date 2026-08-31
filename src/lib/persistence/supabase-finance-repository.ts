@@ -2,10 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Budget, BudgetAdjustment } from "@/components/budgets/budget-model";
 import type { GoalContributionPlan } from "@/components/goals/goal-contribution-plan";
 import type { Goal } from "@/components/goals/goal-model";
+import type { Investment } from "@/components/investments/investment-model";
 import type { Transaction } from "@/components/transactions/transaction-model";
 import type { FinanceRepository } from "@/lib/persistence/finance-repository";
 import type { FinanceUserId, PersistedFinanceData } from "@/lib/persistence/finance-persistence-model";
-import { budgetAdjustmentRowToDomain, budgetAdjustmentToRow, budgetRowToDomain, budgetToRow, goalContributionPlanRowToDomain, goalContributionPlanToRow, goalRowToDomain, goalToRow, transactionRowToDomain, transactionToRow, type FinanceDatabase } from "@/lib/persistence/supabase-finance-mappers";
+import { budgetAdjustmentRowToDomain, budgetAdjustmentToRow, budgetRowToDomain, budgetToRow, goalContributionPlanRowToDomain, goalContributionPlanToRow, goalRowToDomain, goalToRow, investmentRowToDomain, investmentToRow, transactionRowToDomain, transactionToRow, type FinanceDatabase } from "@/lib/persistence/supabase-finance-mappers";
 
 type SupabaseError = { code?: string } | null;
 
@@ -17,24 +18,27 @@ export class SupabaseFinanceRepository implements FinanceRepository {
   }
 
   async loadFinanceData(userId: FinanceUserId): Promise<PersistedFinanceData> {
-    const [transactions, budgets, adjustments, goals, plans] = await Promise.all([
+    const [transactions, budgets, adjustments, goals, plans, investments] = await Promise.all([
       this.client.from("transactions").select("*").eq("user_id", userId),
       this.client.from("budgets").select("*").eq("user_id", userId),
       this.client.from("budget_adjustments").select("*").eq("user_id", userId),
       this.client.from("goals").select("*").eq("user_id", userId),
       this.client.from("goal_contribution_plans").select("*").eq("user_id", userId),
+      this.client.from("investments").select("*").eq("user_id", userId),
     ]);
     throwIfSupabaseError(transactions.error, "Failed to load transactions");
     throwIfSupabaseError(budgets.error, "Failed to load budgets");
     throwIfSupabaseError(adjustments.error, "Failed to load budget adjustments");
     throwIfSupabaseError(goals.error, "Failed to load goals");
     throwIfSupabaseError(plans.error, "Failed to load goal contribution plans");
+    throwIfSupabaseError(investments.error, "Failed to load investments");
     return {
       transactions: (transactions.data ?? []).map(transactionRowToDomain),
       budgets: (budgets.data ?? []).map(budgetRowToDomain),
       budgetAdjustments: (adjustments.data ?? []).map(budgetAdjustmentRowToDomain),
       goals: (goals.data ?? []).map(goalRowToDomain),
       goalContributionPlans: (plans.data ?? []).map(goalContributionPlanRowToDomain),
+      investments: (investments.data ?? []).map(investmentRowToDomain),
     };
   }
 
@@ -129,6 +133,18 @@ export class SupabaseFinanceRepository implements FinanceRepository {
     const result = await this.client.from("goal_contribution_plans").delete().eq("user_id", userId).eq("goal_id", goalId).select("goal_id").single();
     throwIfSupabaseError(result.error, "Failed to delete goal contribution plan");
     requireData(result.data, "Failed to delete goal contribution plan");
+  }
+
+  async upsertInvestment(userId: FinanceUserId, investment: Investment): Promise<Investment> {
+    const result = await this.client.from("investments").upsert(investmentToRow(userId, investment), { onConflict: "user_id,id" }).select("*").single();
+    throwIfSupabaseError(result.error, "Failed to upsert investment");
+    return investmentRowToDomain(requireData(result.data, "Failed to upsert investment"));
+  }
+
+  async deleteInvestment(userId: FinanceUserId, investmentId: string): Promise<void> {
+    const result = await this.client.from("investments").delete().eq("user_id", userId).eq("id", investmentId).select("id").single();
+    throwIfSupabaseError(result.error, "Failed to delete investment");
+    requireData(result.data, "Failed to delete investment");
   }
 }
 

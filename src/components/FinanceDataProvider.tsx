@@ -5,6 +5,7 @@ import { createContext, type Dispatch, type ReactNode, type SetStateAction, useC
 import type { Budget, BudgetAdjustment } from "@/components/budgets/budget-model";
 import type { Goal } from "@/components/goals/goal-model";
 import type { GoalContributionPlan } from "@/components/goals/goal-contribution-plan";
+import type { Investment } from "@/components/investments/investment-model";
 import type { Transaction } from "@/components/transactions/transaction-model";
 import { SupabaseFinanceRepository } from "@/lib/persistence/supabase-finance-repository";
 import { createClient } from "@/lib/supabase/client";
@@ -21,7 +22,9 @@ export type FinanceMutationOperation =
   | "upsertGoal"
   | "deleteGoal"
   | "upsertGoalContributionPlan"
-  | "deleteGoalContributionPlan";
+  | "deleteGoalContributionPlan"
+  | "upsertInvestment"
+  | "deleteInvestment";
 
 export type FinanceMutationState = {
   status: "idle" | "saving" | "success" | "error";
@@ -46,6 +49,7 @@ type FinanceDataContextValue = {
   setGoals: Dispatch<SetStateAction<Goal[]>>;
   goalContributionPlans: Record<string, GoalContributionPlan>;
   setGoalContributionPlans: Dispatch<SetStateAction<Record<string, GoalContributionPlan>>>;
+  investments: Investment[];
   isHydrating: boolean;
   hydrationError: Error | null;
   mutationState: FinanceMutationState;
@@ -61,6 +65,8 @@ type FinanceDataContextValue = {
   deleteGoal: (goalId: string) => Promise<void>;
   upsertGoalContributionPlan: (plan: GoalContributionPlan) => Promise<GoalContributionPlan>;
   deleteGoalContributionPlan: (goalId: string) => Promise<void>;
+  upsertInvestment: (investment: Investment) => Promise<Investment>;
+  deleteInvestment: (investmentId: string) => Promise<void>;
 };
 
 const FinanceDataContext = createContext<FinanceDataContextValue | undefined>(undefined);
@@ -73,6 +79,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
   const [budgetAdjustments, setBudgetAdjustments] = useState<Record<string, BudgetAdjustment>>({});
   const [goals, setGoals] = useState<Goal[]>([]);
   const [goalContributionPlans, setGoalContributionPlans] = useState<Record<string, GoalContributionPlan>>({});
+  const [investments, setInvestments] = useState<Investment[]>([]);
   const [isHydrating, setIsHydrating] = useState(true);
   const [hydrationError, setHydrationError] = useState<Error | null>(null);
   const [mutationState, setMutationState] = useState<FinanceMutationState>(idleMutationState);
@@ -86,6 +93,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     setBudgetAdjustments({});
     setGoals([]);
     setGoalContributionPlans({});
+    setInvestments([]);
   }, []);
 
   const resetMutationLifecycle = useCallback((userId: string | null) => {
@@ -245,6 +253,22 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     }),
   ), [repository, runMutation]);
 
+  const upsertInvestment = useCallback((investment: Investment) => runMutation(
+    "upsertInvestment",
+    `investment:${investment.id}`,
+    (userId) => repository.upsertInvestment(userId, investment),
+    (confirmed) => setInvestments((current) => current.some((item) => item.id === confirmed.id)
+      ? current.map((item) => item.id === confirmed.id ? confirmed : item)
+      : [...current, confirmed]),
+  ), [repository, runMutation]);
+
+  const deleteInvestment = useCallback((investmentId: string) => runMutation(
+    "deleteInvestment",
+    `investment:${investmentId}`,
+    (userId) => repository.deleteInvestment(userId, investmentId),
+    () => setInvestments((current) => current.filter((item) => item.id !== investmentId)),
+  ), [repository, runMutation]);
+
   useEffect(() => {
     let active = true;
     const activeMutationKeys = activeMutationKeysRef.current;
@@ -293,6 +317,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
         setGoalContributionPlans(Object.fromEntries(
           data.goalContributionPlans.map((plan) => [plan.goalId, plan]),
         ));
+        setInvestments(data.investments);
         setHydrationError(null);
         setIsHydrating(false);
       }).catch((error: unknown) => {
@@ -337,6 +362,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     setGoals,
     goalContributionPlans,
     setGoalContributionPlans,
+    investments,
     isHydrating,
     hydrationError,
     mutationState,
@@ -352,8 +378,10 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     deleteGoal,
     upsertGoalContributionPlan,
     deleteGoalContributionPlan,
+    upsertInvestment,
+    deleteInvestment,
     setBudgetAdjustment: (adjustment: BudgetAdjustment) => setBudgetAdjustments((current) => ({ ...current, [adjustment.month]: adjustment })),
-  }), [budgetAdjustments, budgets, createTransaction, importTransactions, deleteBudget, deleteBudgetAdjustment, deleteGoal, deleteGoalContributionPlan, deleteTransaction, goalContributionPlans, goals, hydrationError, isHydrating, mutationState, transactions, updateTransaction, upsertBudget, upsertBudgetAdjustment, upsertGoal, upsertGoalContributionPlan]);
+  }), [budgetAdjustments, budgets, createTransaction, importTransactions, deleteBudget, deleteBudgetAdjustment, deleteGoal, deleteGoalContributionPlan, deleteInvestment, deleteTransaction, goalContributionPlans, goals, hydrationError, investments, isHydrating, mutationState, transactions, updateTransaction, upsertBudget, upsertBudgetAdjustment, upsertGoal, upsertGoalContributionPlan, upsertInvestment]);
 
   return <FinanceDataContext.Provider value={value}>{children}</FinanceDataContext.Provider>;
 }

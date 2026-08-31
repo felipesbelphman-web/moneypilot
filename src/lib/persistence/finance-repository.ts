@@ -1,6 +1,7 @@
 import type { Budget, BudgetAdjustment } from "@/components/budgets/budget-model";
 import type { GoalContributionPlan } from "@/components/goals/goal-contribution-plan";
 import type { Goal } from "@/components/goals/goal-model";
+import type { Investment } from "@/components/investments/investment-model";
 import type { Transaction } from "@/components/transactions/transaction-model";
 import type { FinanceUserId, PersistedFinanceData } from "@/lib/persistence/finance-persistence-model";
 
@@ -31,4 +32,7 @@ export interface FinanceRepository {
 
   upsertGoalContributionPlan(userId: FinanceUserId, plan: GoalContributionPlan): Promise<GoalContributionPlan>;
   deleteGoalContributionPlan(userId: FinanceUserId, goalId: string): Promise<void>;
+
+  upsertInvestment(userId: FinanceUserId, investment: Investment): Promise<Investment>;
+  deleteInvestment(userId: FinanceUserId, investmentId: string): Promise<void>;
 }

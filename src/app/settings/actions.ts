@@ -82,6 +82,7 @@ export async function updateProfilePreferences(input: {
       "budget_adjustments",
       "goals",
       "goal_contribution_plans",
+      "investments",
     ] as const;
     const checks = await Promise.all(
       tables.map((table) => supabase

@@ -1,6 +1,7 @@
 import type { Budget, BudgetAdjustment } from "@/components/budgets/budget-model";
 import type { GoalContributionPlan } from "@/components/goals/goal-contribution-plan";
 import type { Goal } from "@/components/goals/goal-model";
+import type { Investment } from "@/components/investments/investment-model";
 import type { Transaction } from "@/components/transactions/transaction-model";
 
 /** Opaque ownership value supplied by the future authenticated session. */
@@ -16,4 +17,5 @@ export type PersistedFinanceData = {
   budgetAdjustments: BudgetAdjustment[];
   goals: Goal[];
   goalContributionPlans: GoalContributionPlan[];
+  investments: Investment[];
 };
