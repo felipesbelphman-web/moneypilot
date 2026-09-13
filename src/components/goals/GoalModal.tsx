@@ -10,6 +10,7 @@ import { calculateGoal } from "@/components/goals/goal-calculations";
 import type { Goal, GoalPriority } from "@/components/goals/goal-model";
 import { isValidTargetMonth, normalizeGoalName } from "@/components/goals/goal-model";
 import { localizeCopy } from "@/i18n/localize-copy";
+import { parseGoalSavedAmountText, parseGoalTargetAmountText } from "@/lib/domain/financial-input-adapters";
 
 type GoalModalProps = {
   mode: "create" | "edit";
@@ -31,14 +32,6 @@ function toForm(goal?: Goal): FormState {
   return goal ? { name: goal.name, targetAmount: String(goal.targetAmount), savedAmount: String(goal.savedAmount), targetDate: goal.targetDate, priority: goal.priority } : { name: "", targetAmount: "", savedAmount: "0", targetDate: "", priority: "secondary" };
 }
 
-function parseAmount(value: string) {
-  const cleaned = value.replace(/(?:R\$|€|£|\$|EUR|GBP|USD|BRL|\s)/gi, "");
-  const normalized = cleaned.includes(",") && cleaned.includes(".")
-    ? cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".") ? cleaned.replace(/\./g, "").replace(",", ".") : cleaned.replace(/,/g, "")
-    : cleaned.replace(",", ".");
-  return Number(normalized);
-}
-
 export function GoalModal({ mode, goal, goals, onClose, onSubmit, onRequestDelete }: GoalModalProps) {
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
@@ -47,11 +40,12 @@ export function GoalModal({ mode, goal, goals, onClose, onSubmit, onRequestDelet
   const [error, setError] = useState("");
   const titleId = useId();
   const fields = (key: keyof FormState, value: string) => setForm((current) => ({ ...current, [key]: value }));
-  const draftTarget = parseAmount(form.targetAmount);
-  const draftSaved = parseAmount(form.savedAmount);
-  const preview = calculateGoal({ targetAmount: Number.isFinite(draftTarget) ? draftTarget : 0, savedAmount: Number.isFinite(draftSaved) ? draftSaved : 0, targetDate: form.targetDate });
-  const previewContribution = preview.requiredMonthlyContribution === null ? "—" : money(preview.requiredMonthlyContribution);
-  const previewDetail = preview.isPastDue ? tr("Target date passed") : preview.isCompleted ? tr("Goal completed") : preview.isDueThisMonth ? tr("Needed to complete this month") : preview.monthsRemaining > 0 ? `${preview.monthsRemaining} ${tr("months remaining")}` : tr("Choose a future target month");
+  const draftTarget = parseGoalTargetAmountText(form.targetAmount);
+  const draftSaved = parseGoalSavedAmountText(form.savedAmount);
+  const previewResult = draftTarget !== null && draftSaved !== null ? calculateGoal({ targetAmount: draftTarget, savedAmount: draftSaved, targetDate: form.targetDate }) : null;
+  const preview = previewResult?.available ? previewResult : null;
+  const previewContribution = preview?.requiredMonthlyContribution == null ? "—" : money(preview.requiredMonthlyContribution);
+  const previewDetail = !preview ? tr("Choose a future target month") : preview.isPastDue ? tr("Target date passed") : preview.isCompleted ? tr("Goal completed") : preview.isDueThisMonth ? tr("Needed to complete this month") : preview.monthsRemaining > 0 ? `${preview.monthsRemaining} ${tr("months remaining")}` : tr("Choose a future target month");
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -62,11 +56,11 @@ export function GoalModal({ mode, goal, goals, onClose, onSubmit, onRequestDelet
   function submit(event: React.FormEvent) {
     event.preventDefault();
     const name = form.name.trim();
-    const targetAmount = parseAmount(form.targetAmount);
-    const savedAmount = parseAmount(form.savedAmount);
+    const targetAmount = parseGoalTargetAmountText(form.targetAmount);
+    const savedAmount = parseGoalSavedAmountText(form.savedAmount);
     if (!name) return setError(tr("Enter a goal name."));
-    if (!Number.isFinite(targetAmount) || targetAmount <= 0) return setError(tr("Target amount must be greater than zero."));
-    if (!Number.isFinite(savedAmount) || savedAmount < 0) return setError(tr("Saved amount cannot be negative."));
+    if (targetAmount === null || targetAmount <= 0) return setError(tr("Target amount must be greater than zero."));
+    if (savedAmount === null) return setError(tr("Saved amount cannot be negative."));
     if (savedAmount > targetAmount) return setError(tr("Saved amount cannot exceed the target amount."));
     if (!isValidTargetMonth(form.targetDate)) return setError(tr("Choose a valid target month."));
     if (form.priority !== "primary" && form.priority !== "secondary") return setError(tr("Choose a valid priority."));

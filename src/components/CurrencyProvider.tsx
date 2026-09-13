@@ -17,6 +17,8 @@ import {
   type CurrencyCode,
 } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/client";
+import { ProfileRepository } from "@/lib/auth/profile-repository";
+import { settleProfilePreferenceLoad } from "@/lib/auth/profile-contract";
 
 type CurrencyContextValue = {
   currency: CurrencyCode | null;
@@ -39,6 +41,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const supabase = createClient();
+    const repository = new ProfileRepository(supabase);
     let active = true;
     let generation = 0;
 
@@ -54,15 +57,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
       setCurrency(null);
       setIsCurrencyHydrating(true);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("currency_code")
-        .eq("id", userId)
-        .single<{ currency_code: string }>();
+      const result = await settleProfilePreferenceLoad(() => repository.getPreferences(userId));
 
       if (!active || requestId !== generation) return;
-      const profileCurrency = profile?.currency_code ?? "";
-      setCurrency(isCurrencyCode(profileCurrency) ? profileCurrency : null);
+      setCurrency(result.status === "success" && isCurrencyCode(result.data.currency_code) ? result.data.currency_code : null);
       setIsCurrencyHydrating(false);
     }
 

@@ -10,18 +10,19 @@ type TransactionFiltersProps = {
   values: [string, string, string, string, string];
   options: [FilterOption[], FilterOption[], FilterOption[], FilterOption[], FilterOption[]];
   onChange: (index: number, value: string) => void;
+  mobile?: boolean;
 };
 
-export function TransactionFilters({ values, options, onChange }: TransactionFiltersProps) {
+export function TransactionFilters({ values, options, onChange, mobile = false }: TransactionFiltersProps) {
   const { language } = useLanguage();
-  const filters = translations[language].appTransactions.filters.map((label, index) => ({ label, width: [198, 198, 202, 198, 266][index] }));
+  const filters = translations[language].appTransactions.filters;
   return (
-    <div className="absolute left-0 top-[250px] flex h-[38px] w-[1090px] gap-[7px]">
+    <div data-transaction-filters={mobile ? "mobile" : "desktop"} className={mobile ? "grid min-w-0 grid-cols-1 gap-3 min-[420px]:grid-cols-2" : "grid h-[34px] min-w-0 max-w-full shrink-0 grid-cols-5 gap-x-[19.665px]"}>
       {filters.map((filter, index) => (
-        <label key={filter.label} style={{ width: filter.width }} className="relative flex h-[38px] shrink-0 cursor-pointer items-center justify-between rounded-[12px] border border-[#28313B] bg-[#080B0F]/35 px-[14px] text-[9.5px] font-medium text-[#9CA6B2]">
-          <span>{options[index].find((option) => option.value === values[index])?.label ?? filter.label}</span>
-          <Image src="/moneypilot/transactions/icons/chevron-down-outline.svg" alt="" width={15} height={15} className="size-[15px]" />
-          <select value={values[index]} onChange={(event) => onChange(index, event.target.value)} aria-label={filter.label} className="absolute inset-0 cursor-pointer opacity-0">{options[index].map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+        <label key={filter} className={`relative flex min-w-0 cursor-pointer items-center justify-between rounded-[10.717px] border border-[var(--border-default)] bg-[var(--background-subtle)] px-[11.61px] text-[12px] font-medium text-[var(--text-secondary)] ${mobile ? "h-11" : "h-[33.936px]"}`}>
+          <span className="min-w-0 truncate">{options[index].find((option) => option.value === values[index])?.label ?? filter}</span>
+          <Image src="/moneypilot/transactions/icons/chevron-down-outline.svg" alt="" width={14} height={14} className="size-[13.396px] shrink-0" />
+          <select value={values[index]} onChange={(event) => onChange(index, event.target.value)} aria-label={filter} className="absolute inset-0 cursor-pointer opacity-0">{options[index].map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
         </label>
       ))}
     </div>

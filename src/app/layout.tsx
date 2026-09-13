@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Inter, Poppins } from "next/font/google";
+import { Bebas_Neue, Inter, Poppins, Roboto_Mono } from "next/font/google";
+import Script from "next/script";
 
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { FinanceDataProvider } from "@/components/FinanceDataProvider";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
-import DesktopSidebar from "@/components/navigation/DesktopSidebar";
+import { AccountProfileProvider } from "@/components/profile/AccountProfileProvider";
 import { ThemeProvider, themeBootstrapScript } from "@/components/ThemeProvider";
+import DesktopSidebar, { SidebarLayoutProvider } from "@/components/navigation/DesktopSidebar";
+import { AppShellFrame } from "@/components/layout/AppShellFrame";
+import { getOptionalCurrentAccount } from "@/lib/auth/profile";
 
 import "./globals.css";
 
@@ -26,31 +30,45 @@ const bebasNeue = Bebas_Neue({
   weight: "400",
 });
 
+const robotoMono = Roboto_Mono({
+  variable: "--font-roboto-mono",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "MoneyPilot",
   description:
     "Understand your money, plan your goals and make better financial decisions.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const initialAccount = await getOptionalCurrentAccount();
+
   return (
     <html
       lang="en"
       data-theme="light"
       suppressHydrationWarning
-      className={`${inter.variable} ${poppins.variable} ${bebasNeue.variable} antialiased`}
+      className={`${inter.variable} ${poppins.variable} ${bebasNeue.variable} ${robotoMono.variable} antialiased`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+        <Script id="moneypilot-theme-bootstrap" strategy="beforeInteractive">
+          {themeBootstrapScript}
+        </Script>
       </head>
       <body>
         <ThemeProvider>
           <LanguageProvider>
             <CurrencyProvider>
-              <FinanceDataProvider>
-                <DesktopSidebar />
-                {children}
-              </FinanceDataProvider>
+              <AccountProfileProvider initialAccount={initialAccount}>
+                <FinanceDataProvider>
+                  <SidebarLayoutProvider>
+                    <AppShellFrame sidebar={<DesktopSidebar />}>
+                      {children}
+                    </AppShellFrame>
+                  </SidebarLayoutProvider>
+                </FinanceDataProvider>
+              </AccountProfileProvider>
             </CurrencyProvider>
           </LanguageProvider>
         </ThemeProvider>

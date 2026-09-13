@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isPrivateRoute } from "@/lib/auth/private-routes";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -40,24 +41,9 @@ export async function updateSession(request: NextRequest) {
 
 const isAuthenticated = Boolean(data?.claims?.sub);
 
-const privateRoutes = [
-  "/dashboard",
-  "/transactions",
-  "/budgets",
-  "/insights",
-  "/goals",
-  "/investments",
-  "/settings",
-  "/categories",
-];
+const requestIsPrivate = isPrivateRoute(request.nextUrl.pathname);
 
-const isPrivateRoute = privateRoutes.some(
-  (route) =>
-    request.nextUrl.pathname === route ||
-    request.nextUrl.pathname.startsWith(`${route}/`),
-);
-
-if (isPrivateRoute && !isAuthenticated) {
+if (requestIsPrivate && !isAuthenticated) {
   const redirectUrl = request.nextUrl.clone();
 
   redirectUrl.pathname = "/auth";

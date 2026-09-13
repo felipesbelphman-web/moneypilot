@@ -1,20 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { getSettingsAccount } from "@/app/settings/actions";
-import { DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
+import { useMemo } from "react";
+import { DesktopInternalPagePanel, DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
 import { calculateDashboardFinancialSummary, getDashboardMonth } from "@/components/dashboard/dashboard-financial-summary";
-import { calculateNextBestAction } from "@/components/dashboard/next-best-action";
+import { calculateNextBestAction, resolveNextBestActionCopy } from "@/components/dashboard/next-best-action";
 import { useFinanceData } from "@/components/FinanceDataProvider";
 import { InsightsSpendingChart } from "@/components/insights/InsightsSpendingChart";
-import { useLanguage } from "@/components/LanguageProvider";
+import { type Language, useLanguage } from "@/components/LanguageProvider";
 import { useCurrency } from "@/components/CurrencyProvider";
-import { UserAvatar } from "@/components/profile/UserAvatar";
 
 const iconRoot = "/moneypilot/insights/icons";
 const styles = [{ color: "#8B5CF6", icon: "pricetag-outline.svg" }, { color: "#F43F5E", icon: "receipt-refund.svg" }, { color: "#22C55E", icon: "currency-dollar.svg" }, { color: "#3B82F6", icon: "target.svg" }];
 const card = "overflow-hidden rounded-[18px] border border-[#28313B] bg-[rgba(8,11,15,0.20)] shadow-[0_6px_14px_rgba(0,0,0,0.20)]";
+const localeByLanguage: Record<Language, string> = { en: "en-GB", pt: "pt-PT", es: "es-ES", de: "de-DE", fr: "fr-FR", nl: "nl-NL", it: "it-IT" };
 
 const translations = {
   en: { title: "Insights", description: "Understand your finances through real data and deterministic analysis.", analysis: "Financial insights", comparison: "Comparison with previous month", spending: "Where your money weighs most", patterns: "Detected patterns", plan: "Recommended plan", opportunities: "Priority opportunities", total: "Total", labels: ["Monthly priority", "Income usage", "Potential savings", "Goal impact"], noPriority: "No priority yet", priorityHelp: "Add transactions and budgets to identify what needs attention.", noIncome: "No income data yet", notCalculated: "Not calculated yet", noGoal: "No goal yet", goalHelp: "Create a goal to measure potential impact.", noInsights: "No insights yet", insightsHelp: "Add transactions or import a statement to start building your analysis.", notEnough: "Not enough data yet", comparisonHelp: "Add transactions across multiple months to see changes over time.", noSpending: "No spending data yet", spendingHelp: "Add expenses to see your category breakdown.", noPatterns: "No patterns yet", patternsHelp: "Patterns will appear after MoneyPilot has enough transaction history.", noRecommendation: "No recommendation yet", recommendationHelp: "Add financial data to receive the next deterministic action.", noOpportunities: "No opportunities detected yet", opportunitiesHelp: "Opportunities will appear when financial data needs attention.", loading: "Loading financial data…", ofIncome: "of income used", perMonth: "/month", remaining: "remaining" },
@@ -36,50 +35,30 @@ export default function InsightsPage() {
   const { formatMoney: money } = useCurrency();
   const t = extendedTranslations[language];
   const data = useFinanceData();
-  const [accountEmail, setAccountEmail] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const month = getDashboardMonth();
   const summary = useMemo(() => calculateDashboardFinancialSummary({ transactions: data.transactions, budgets: data.budgets, budgetAdjustments: data.budgetAdjustments, goals: data.goals, goalContributionPlans: data.goalContributionPlans, month }), [data.transactions, data.budgets, data.budgetAdjustments, data.goals, data.goalContributionPlans, month]);
-  const action = useMemo(() => calculateNextBestAction({ monthlyStatus: summary.monthlyStatus, budgetProjection: summary.budgetProjection, safeSavingsCapacity: summary.safeSavingsCapacity, primaryGoal: summary.primaryGoal, hasActiveBudgetAdjustment: summary.savingsCapacity.activeAdjustmentTarget !== null }), [summary]);
-  const hasPriority = summary.hasTransactions && summary.hasBudgets;
-  const hasUsage = summary.income > 0 && summary.expenseTransactionCount > 0;
-  const hasSavings = summary.hasBudgets && summary.budgetProjection.canProject && summary.safeSavingsCapacity > 0;
+  const action = useMemo(() => calculateNextBestAction({ aggregationAvailable: summary.aggregationAvailable, monthlyStatus: summary.monthlyStatus, budgetProjection: summary.budgetProjection, safeSavingsCapacity: summary.safeSavingsCapacity, netCashFlow: summary.netCashFlow, primaryGoal: summary.primaryGoal, goalsAvailable: summary.goalsAvailable, hasGoals: summary.hasGoals, activeBudgetAdjustment: data.budgetAdjustments[month], hasCurrentTransactions: summary.hasTransactions }), [data.budgetAdjustments, month, summary]);
+  const actionCopy = resolveNextBestActionCopy(action, language);
+  const hasPriority = summary.aggregationAvailable && summary.hasTransactions && summary.hasBudgets;
+  const hasUsage = summary.aggregationAvailable && summary.income > 0 && summary.expenseTransactionCount > 0;
+  const hasSavings = summary.aggregationAvailable && summary.safeSavingsCapacity !== null && summary.hasBudgets && summary.budgetProjection.canProject && summary.safeSavingsCapacity > 0;
   const metrics = [
-    { value: hasPriority ? action.title : t.noPriority, detail: hasPriority ? action.description : t.priorityHelp },
+    { value: hasPriority ? actionCopy.title : t.noPriority, detail: hasPriority ? actionCopy.description : t.priorityHelp },
     { value: hasUsage ? `${(summary.expenses / summary.income * 100).toLocaleString(language, { maximumFractionDigits: 1 })}%` : "—", detail: hasUsage ? `${money(summary.expenses)} · ${t.ofIncome}` : t.noIncome },
-    { value: hasSavings ? `${money(summary.safeSavingsCapacity)}${t.perMonth}` : "—", detail: hasSavings ? action.description : t.notCalculated },
+    { value: hasSavings && summary.safeSavingsCapacity !== null ? `${money(summary.safeSavingsCapacity)}${t.perMonth}` : "—", detail: hasSavings ? actionCopy.description : t.notCalculated },
     { value: summary.primaryGoal?.goal.name ?? t.noGoal, detail: summary.primaryGoal ? `${money(summary.primaryGoal.calculation.remainingAmount)} ${t.remaining}` : t.goalHelp },
   ];
   const hasData = summary.hasFinancialData && !data.isHydrating;
   const recommendation = hasData && action.type !== "no_action";
-  const monthLabel = new Intl.DateTimeFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-GB", { month: "long", year: "numeric" }).format(new Date());
+  const monthLabel = new Intl.DateTimeFormat(localeByLanguage[language], { month: "long", year: "numeric" }).format(new Date());
   const panel = (heading: string, title: string, detail: string) => <section className={`${card} px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{heading}</h2><div className="h-[130px]"><Neutral title={title} detail={detail} /></div></section>;
 
-  useEffect(() => {
-    let active = true;
-
-    getSettingsAccount()
-      .then((account) => {
-        if (!active) return;
-
-        setAccountEmail(account.email);
-        setDisplayName(account.profile.display_name ?? "");
-      })
-      .catch((error) => {
-        console.error("Failed to load Insights account:", error);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return <div className="relative min-h-screen bg-[#080B0F]"><DesktopScaleCanvas><main className="relative h-[1024px] w-[1536px] overflow-hidden text-[#F5F7FA]"><section className="absolute left-[231px] top-[107px] h-[810px] w-[1164px] overflow-hidden rounded-[38px] border border-[#28313B]/16 bg-[#0D1117]/50 px-[32px] py-[16px] shadow-[0_22px_42px_rgba(0,0,0,0.45)] backdrop-blur-[20px]"><div className="flex h-[767.67px] w-[1098px] flex-col gap-[12px] overflow-hidden">
-    <div className="flex h-[36.75px] shrink-0 items-center gap-[18px]"><div className="h-[37px] w-[37px] overflow-hidden"><Image src="/moneypilot/moneypilot-logo.svg" alt="" width={180} height={40} priority className="h-[37px] w-auto max-w-none" /></div><span className="money-pilot-wordmark font-brand text-[21.44px] font-medium tracking-[0.429px]">MoneyPilot</span></div>
-    <header className="flex h-[58px] shrink-0 items-center justify-between"><div><h1 className="text-[23px] font-semibold leading-none">{t.title}</h1><p className="mt-[5px] text-[13px] text-[#9CA6B2]">{t.description}</p></div><div className="flex items-center gap-[16px]"><div className="flex h-[38px] items-center gap-[7px] rounded-[19px] border border-[#28313B] px-[13px] text-[11px] capitalize text-[#9CA6B2]"><Image src="/moneypilot/budgets/icons/calendar.svg" alt="" width={18} height={18} />{monthLabel}</div><UserAvatar name={displayName} email={accountEmail} size={48} /></div></header>
+  return <div className="relative min-h-screen bg-[#080B0F]"><DesktopScaleCanvas><main className="relative h-[1024px] w-[1536px] overflow-hidden text-[#F5F7FA]"><DesktopInternalPagePanel><div className="flex h-[767.67px] w-[1098px] flex-col gap-[12px] overflow-hidden">
+    <header className="flex h-[58px] shrink-0 items-center justify-between"><div><h1 className="text-[23px] font-semibold leading-none">{t.title}</h1><p className="mt-[5px] text-[13px] text-[#9CA6B2]">{t.description}</p></div><div className="flex items-center gap-[16px]"><div className="flex h-[38px] items-center gap-[7px] rounded-[19px] border border-[#28313B] px-[13px] text-[11px] capitalize text-[#9CA6B2]"><Image src="/moneypilot/budgets/icons/calendar.svg" alt="" width={18} height={18} />{monthLabel}</div>
+  </div></header>
     <div className="flex h-[100px] shrink-0 gap-[12px]">{metrics.map((metric, index) => <article key={t.labels[index]} className={`${card} flex h-[100px] w-[265.5px] flex-col gap-[6px] px-[12px] py-[10px]`}><div className="flex items-center gap-[8px]"><span className="flex size-[30px] items-center justify-center rounded-[9px] border" style={{ borderColor: styles[index].color, backgroundColor: `${styles[index].color}24` }}><Image src={`${iconRoot}/${styles[index].icon}`} alt="" width={20} height={20} /></span><h2 className="text-[11px] font-semibold">{t.labels[index]}</h2></div><strong className="truncate text-[18px] leading-none">{data.isHydrating ? "—" : metric.value}</strong><p className="truncate text-[9px] text-[#9CA6B2]">{data.isHydrating ? t.loading : metric.detail}</p></article>)}</div>
-    <div className="flex h-[177px] shrink-0 gap-[12px]"><section className={`${card} h-[177px] w-[677px] px-[12px] py-[11px]`}><div className="flex items-center gap-[7px]"><span className="flex size-[25px] items-center justify-center rounded-[8px] border border-[#3B82F6]/50 bg-[#60A5FA]/15 text-[8px] font-bold text-[#60A5FA]">MP</span><h2 className="text-[14px] font-semibold">{t.analysis}</h2></div><div className="h-[125px]"><Neutral title={hasData ? action.title : data.isHydrating ? t.loading : t.noInsights} detail={hasData ? action.description : data.isHydrating ? "" : t.insightsHelp} /></div></section><div className="h-[177px] w-[409px]">{panel(t.comparison, t.notEnough, t.comparisonHelp)}</div></div>
-    <div className="flex h-[175px] shrink-0 gap-[12px]"><section className={`${card} h-[175px] w-[409px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.spending}</h2><InsightsSpendingChart categories={summary.categorySpending} total={summary.expenses} language={language} emptyTitle={t.noSpending} emptyCopy={t.spendingHelp} totalLabel={t.total} /></section><div className="h-[175px] w-[677px]">{panel(t.patterns, t.noPatterns, t.patternsHelp)}</div></div>
-    <div className="flex h-[170px] shrink-0 gap-[12px]"><div className="h-[170px] w-[409px]">{panel(t.plan, recommendation ? action.title : t.noRecommendation, recommendation ? action.description : t.recommendationHelp)}</div><div className="h-[170px] w-[677px]">{panel(t.opportunities, summary.monthlyStatus === "over_budget" ? action.title : t.noOpportunities, summary.monthlyStatus === "over_budget" ? action.description : t.opportunitiesHelp)}</div></div>
-  </div></section></main></DesktopScaleCanvas></div>;
+    <div className="flex h-[177px] shrink-0 gap-[12px]"><section className={`${card} h-[177px] w-[677px] px-[12px] py-[11px]`}><div className="flex items-center gap-[7px]"><span className="flex size-[25px] items-center justify-center rounded-[8px] border border-[#3B82F6]/50 bg-[#60A5FA]/15 text-[8px] font-bold text-[#60A5FA]">MP</span><h2 className="text-[14px] font-semibold">{t.analysis}</h2></div><div className="h-[125px]"><Neutral title={hasData ? actionCopy.title : data.isHydrating ? t.loading : t.noInsights} detail={hasData ? actionCopy.description : data.isHydrating ? "" : t.insightsHelp} /></div></section><div className="h-[177px] w-[409px]">{panel(t.comparison, t.notEnough, t.comparisonHelp)}</div></div>
+    <div className="flex h-[175px] shrink-0 gap-[12px]"><section className={`${card} h-[175px] w-[409px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.spending}</h2><InsightsSpendingChart categories={summary.categorySpending} total={summary.expenses} available={summary.categoryAggregationAvailable} language={language} emptyTitle={t.noSpending} emptyCopy={t.spendingHelp} totalLabel={t.total} /></section><div className="h-[175px] w-[677px]">{panel(t.patterns, t.noPatterns, t.patternsHelp)}</div></div>
+    <div className="flex h-[170px] shrink-0 gap-[12px]"><div className="h-[170px] w-[409px]">{panel(t.plan, recommendation ? actionCopy.title : t.noRecommendation, recommendation ? actionCopy.description : t.recommendationHelp)}</div><div className="h-[170px] w-[677px]">{panel(t.opportunities, summary.monthlyStatus === "over_budget" ? actionCopy.title : t.noOpportunities, summary.monthlyStatus === "over_budget" ? actionCopy.description : t.opportunitiesHelp)}</div></div>
+  </div></DesktopInternalPagePanel></main></DesktopScaleCanvas></div>;
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
-import { DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
+import { DesktopInternalPagePanel, DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useFinanceData } from "@/components/FinanceDataProvider";
+import { InvestmentAssetsList } from "@/components/investments/InvestmentAssetsList";
 import { InvestmentPerformanceChart, type InvestmentRange } from "@/components/investments/InvestmentPerformanceChart";
 import { PortfolioAllocationChart } from "@/components/investments/PortfolioAllocationChart";
+import { ManualInvestmentModal } from "@/components/investments/ManualInvestmentModal";
 
 const iconRoot = "/moneypilot/investments/icons";
 const card = "overflow-hidden rounded-[18px] border border-[#28313B] bg-[#080B0F]/20 shadow-[0_6px_14px_rgba(0,0,0,0.2)]";
@@ -29,15 +31,58 @@ function Empty({ title, detail }: { title: string; detail: string }) { return <d
 
 export default function InvestmentsPage() {
   const { language } = useLanguage();
-  const t = extendedCopy[language];
-  const [filter, setFilter] = useState(0);
+const { investments, upsertInvestment } = useFinanceData();
+const t = extendedCopy[language];
+const [filter, setFilter] = useState(0);
+const [manualModalOpen, setManualModalOpen] = useState(false);
+
+const visibleInvestments = investments.filter((investment) => {
+  if (filter === 1) {
+    return investment.assetType === "stock" || investment.assetType === "etf";
+  }
+
+  if (filter === 2) {
+    return investment.assetType === "crypto";
+  }
+
+  return true;
+});
   const ranges: InvestmentRange[] = ["7D", "1M", "3M", "1A"];
-  return <main className="min-h-screen bg-[#080B0F] font-[Inter] text-[#F5F7FA]"><DesktopScaleCanvas><div className="relative h-[1024px] w-[1536px] overflow-hidden"><section className="absolute left-[231px] top-[107px] h-[810px] w-[1164px] overflow-hidden rounded-[38px] border border-[#28313B]/16 bg-[#0D1117]/50 px-[32px] py-[16px] shadow-[0_22px_42px_rgba(0,0,0,0.45)] backdrop-blur-[20px]"><div className="flex h-[767.623px] w-[1098px] flex-col gap-[12px]">
-    <div className="flex h-[36.75px] shrink-0 items-center gap-[18.375px]"><span className="h-[36.75px] w-[36.75px] shrink-0 overflow-hidden"><Image src="/moneypilot/moneypilot-logo.svg" alt="" width={180} height={40} priority className="h-[36.75px] w-auto max-w-none" /></span><span className="money-pilot-wordmark font-brand text-[21.44px] font-medium tracking-[0.4288px]">MoneyPilot</span></div>
-    <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[610px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{t.title}</h1><p className="text-[13.2px] text-[#9CA6B2]">{t.description}</p></div><div className="flex h-[52px] items-center gap-[16px]"><div className="flex h-[46px] w-[252px] items-center justify-center rounded-[23px] border border-[#28313B] bg-[#080B0F]/34 p-[4px]">{t.filters.map((item, index) => <button key={item} type="button" onClick={() => setFilter(index)} className={`h-[38px] w-[80px] rounded-[19px] text-[10.5px] font-medium ${filter === index ? "bg-[#3B82F6] text-[#F5F7FA]" : "text-[#9CA6B2]"}`}>{item}</button>)}</div><Image src="/moneypilot/dashboard-avatar.png" alt={t.avatar} width={52} height={52} className="size-[52px] rounded-full" /></div></header>
+  return <main className="min-h-screen bg-[#080B0F] font-[Inter] text-[#F5F7FA]"><DesktopScaleCanvas><div className="relative h-[1024px] w-[1536px] overflow-hidden"><DesktopInternalPagePanel><div className="flex h-[767.623px] w-[1098px] flex-col gap-[12px]">
+    <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[610px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{t.title}</h1><p className="text-[13.2px] text-[#9CA6B2]">{t.description}</p></div><div className="flex h-[52px] items-center gap-[16px]"><div className="flex h-[46px] w-[252px] items-center justify-center rounded-[23px] border border-[#28313B] bg-[#080B0F]/34 p-[4px]">{t.filters.map((item, index) => <button key={item} type="button" onClick={() => setFilter(index)} className={`h-[38px] w-[80px] rounded-[19px] text-[10.5px] font-medium ${filter === index ? "bg-[#3B82F6] text-[#F5F7FA]" : "text-[#9CA6B2]"}`}>{item}</button>)}</div>
+    <button
+      type="button"
+      onClick={() => setManualModalOpen(true)}
+      className="flex h-[40px] items-center justify-center rounded-[20px] bg-[#3B82F6] px-[18px] text-[10.5px] font-semibold text-white transition hover:bg-[#2563EB]"
+    >
+      + Add investment
+    </button>
+   </div></header>
     <section aria-label={t.summary} className="flex h-[100px] shrink-0 gap-[12px]">{t.metrics.map((metric, index) => <article key={metric.label} className={`${card} flex h-[100px] w-[265.5px] shrink-0 flex-col gap-[6px] px-[12px] py-[10px]`}><div className="flex h-[30px] items-center gap-[8px]"><span className="flex size-[30px] items-center justify-center rounded-[9px] border" style={{ borderColor: summaryStyles[index].color, backgroundColor: `${summaryStyles[index].color}24` }}><Glyph name={summaryStyles[index].icon} color={summaryStyles[index].color} /></span><h2 className="text-[11px] font-semibold">{metric.label}</h2></div><strong className="text-[18px] font-semibold leading-none">{metric.value}</strong><p className="truncate text-[9px] text-[#9CA6B2]">{metric.detail}</p></article>)}</section>
     <section className="flex h-[185px] shrink-0 gap-[12px]"><article className={`${card} h-[185px] w-[677px] shrink-0 px-[12px] py-[10px]`}><div className="flex h-[24px] items-center justify-between"><h2 className="text-[14px] font-semibold">{t.performance}</h2><div className="flex gap-[4px]">{ranges.map((item) => <button key={item} type="button" disabled className={`h-[24px] rounded-[12px] border border-[#28313B] bg-[#080B0F]/24 text-[8px] text-[#64707D] disabled:cursor-not-allowed ${item === "1A" ? "w-[48px]" : "w-[40px]"}`}>{item}</button>)}</div></div><InvestmentPerformanceChart title={t.noPerformance} detail={t.performanceHelp} /></article><article className={`${card} h-[185px] w-[409px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.allocation}</h2><PortfolioAllocationChart title={t.noAllocation} detail={t.allocationHelp} /></article></section>
-    <section className="flex h-[185px] shrink-0 gap-[12px]"><article className={`${card} h-[185px] w-[677px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.assets}</h2><div className="h-[145px]"><Empty title={t.noAssets} detail={t.assetsHelp} /></div></article><article className={`${card} h-[185px] w-[409px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.contribution}</h2><div className="h-[125px]"><Empty title={t.noContribution} detail={t.contributionHelp} /></div><button type="button" disabled className="flex h-[18px] w-full cursor-not-allowed items-center justify-end text-[8.5px] font-semibold text-[#64707D]">{t.criteria}</button></article></section>
+    <section className="flex h-[185px] shrink-0 gap-[12px]"><article className={`${card} h-[185px] w-[677px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.assets}</h2><div className="h-[145px]">
+  <InvestmentAssetsList
+    investments={visibleInvestments}
+    emptyTitle={t.noAssets}
+    emptyDetail={t.assetsHelp}
+  />
+</div></article><article className={`${card} h-[185px] w-[409px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.contribution}</h2><div className="h-[125px]"><Empty title={t.noContribution} detail={t.contributionHelp} /></div><button type="button" disabled className="flex h-[18px] w-full cursor-not-allowed items-center justify-end text-[8.5px] font-semibold text-[#64707D]">{t.criteria}</button></article></section>
     <section className="flex h-[143px] shrink-0 gap-[12px]"><article className={`${card} h-[143px] w-[409px] px-[12px] py-[10px]`}><h2 className="flex h-[24px] items-center gap-[7px] text-[14px] font-semibold"><Glyph name="sparkles-outline" color="#3B82F6" />{t.insight}</h2><div className="h-[99px]"><Empty title={t.noInsights} detail={t.insightsHelp} /></div></article><article className={`${card} h-[143px] w-[677px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.decisions}</h2><div className="h-[103px]"><Empty title={t.noDecisions} detail={t.decisionsHelp} /></div></article></section>
-  </div></section></div></DesktopScaleCanvas></main>;
+  </div></DesktopInternalPagePanel></div></DesktopScaleCanvas>
+
+<ManualInvestmentModal
+  open={manualModalOpen}
+  onClose={() => setManualModalOpen(false)}
+  onSubmit={async (draft) => {
+    await upsertInvestment({
+      ...draft,
+      id: crypto.randomUUID(),
+      priceMode: "manual",
+      marketAssetKey: null,
+    });
+    setManualModalOpen(false);
+  }}
+/>
+
+</main>;
 }

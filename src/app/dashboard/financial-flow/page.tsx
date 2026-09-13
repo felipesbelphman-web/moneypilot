@@ -22,7 +22,7 @@ export default function FinancialFlowPage() {
                 </div>
 
                 {/* Financial Flow */}
-                <FinancialFlow />
+                <FinancialFlow demo />
             </div>
         </main>
     );

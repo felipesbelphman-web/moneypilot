@@ -4,12 +4,12 @@ import { useCurrency } from "@/components/CurrencyProvider";
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
+import { DesktopInternalPagePanel, DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
 import { DeleteGoalModal } from "@/components/goals/DeleteGoalModal";
 import { GoalModal } from "@/components/goals/GoalModal";
 import { GoalSavingsPlanModal } from "@/components/goals/GoalSavingsPlanModal";
 import { calculateGoal } from "@/components/goals/goal-calculations";
-import { calculateGoalPlanImpact, isGoalContributionPlanStale } from "@/components/goals/goal-contribution-plan";
+import { calculateGoalPlanImpact, calculateGoalPlanMonthlyTarget, isGoalContributionPlanStale } from "@/components/goals/goal-contribution-plan";
 import { calculateGoalSavingsCapacity, getCurrentFinancialMonth } from "@/components/goals/goal-savings-capacity";
 import type { Goal } from "@/components/goals/goal-model";
 import { formatGoalTargetDate, selectPrimaryGoal } from "@/components/goals/goal-model";
@@ -58,27 +58,31 @@ export default function GoalsPage() {
   const editedGoal = modal?.mode === "edit" ? goals.find((goal) => goal.id === modal.goalId) : undefined;
   const goalToDelete = goals.find((goal) => goal.id === deleteGoalId);
   const planGoal = goals.find((goal) => goal.id === planGoalId);
-  const planCalculation = planGoal ? calculateGoal(planGoal) : null;
-  const primaryCalculation = primaryGoal ? calculateGoal(primaryGoal) : null;
-  const selectedCalculation = selectedGoal ? calculateGoal(selectedGoal) : null;
+  const planResult = planGoal ? calculateGoal(planGoal) : null;
+  const primaryResult = primaryGoal ? calculateGoal(primaryGoal) : null;
+  const selectedResult = selectedGoal ? calculateGoal(selectedGoal) : null;
+  const planCalculation = planResult?.available ? planResult : null;
+  const primaryCalculation = primaryResult?.available ? primaryResult : null;
+  const selectedCalculation = selectedResult?.available ? selectedResult : null;
   const currentMonth = getCurrentFinancialMonth();
   const savingsCapacity = useMemo(() => calculateGoalSavingsCapacity({ budgets, transactions, month: currentMonth, adjustment: budgetAdjustments[currentMonth] }), [budgetAdjustments, budgets, currentMonth, transactions]);
   const selectedPlan = selectedGoal ? goalContributionPlans[selectedGoal.id] : undefined;
   const selectedPlanImpact = selectedPlan && selectedCalculation ? calculateGoalPlanImpact(selectedCalculation.remainingAmount, selectedPlan.baselineRequiredMonthlyContribution, selectedPlan.monthlyTarget) : null;
-  const availableCapacity = primaryCalculation?.isCompleted ? 0 : savingsCapacity.safeMonthlyCapacity;
-  const availableImpact = primaryCalculation && primaryCalculation.requiredMonthlyContribution !== null ? calculateGoalPlanImpact(primaryCalculation.remainingAmount, primaryCalculation.requiredMonthlyContribution, primaryCalculation.requiredMonthlyContribution + availableCapacity) : null;
+  const availableCapacity = !savingsCapacity.available ? null : primaryCalculation?.isCompleted ? 0 : savingsCapacity.safeMonthlyCapacity;
+  const availableMonthlyTarget = availableCapacity !== null && primaryCalculation?.requiredMonthlyContribution !== null && primaryCalculation?.requiredMonthlyContribution !== undefined ? calculateGoalPlanMonthlyTarget(primaryCalculation.requiredMonthlyContribution, availableCapacity) : null;
+  const availableImpact = availableMonthlyTarget?.available && primaryCalculation?.requiredMonthlyContribution !== null && primaryCalculation?.requiredMonthlyContribution !== undefined ? calculateGoalPlanImpact(primaryCalculation.remainingAmount, primaryCalculation.requiredMonthlyContribution, availableMonthlyTarget.value) : null;
   const percentage = (ratio: number) => `${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(ratio * 100)}%`;
   const contributionValue = (calculation: ReturnType<typeof calculateGoal> | null) => calculation?.requiredMonthlyContribution === null || calculation?.requiredMonthlyContribution === undefined ? "—" : `${money(calculation.requiredMonthlyContribution)} / ${dynamic.month}`;
   const contributionDetail = (calculation: ReturnType<typeof calculateGoal> | null, targetDate?: string) => !calculation || !targetDate ? emptyCopy.createFirst : calculation.isCompleted ? dynamic.completed : calculation.isPastDue ? dynamic.passed : calculation.isDueThisMonth ? dynamic.due : `${calculation.monthsRemaining} ${dynamic.until} ${formatGoalTargetDate(targetDate, language)}`;
   const goalSummaryMetrics = t.metrics.map((item, index) => ({
     ...item,
-    ...metricSpecs[index],
-    value: index === 0 ? primaryGoal?.name ?? dynamic.noGoals : index === 1 ? contributionValue(primaryCalculation) : index === 2 ? money(primaryGoal?.savedAmount ?? 0) : `${money(availableCapacity)} / ${dynamic.month}`,
-    detail: index === 0 ? primaryGoal ? `${formatGoalTargetDate(primaryGoal.targetDate, language)} · ${primaryGoal.priority} ${dynamic.goal}` : emptyCopy.createFirst : index === 1 ? contributionDetail(primaryCalculation, primaryGoal?.targetDate) : index === 2 ? primaryCalculation ? `${percentage(primaryCalculation.progressRatio)} ${dynamic.complete} · ${money(primaryCalculation.remainingAmount)} ${dynamic.remaining}` : emptyCopy.noProgress : !primaryGoal ? emptyCopy.noSavingsPlan : availableCapacity > 0 ? `${dynamic.room} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}` : dynamic.noCapacity,
+    ...(index === 2 && !primaryCalculation ? { ...metricSpecs[index], progress: false } : metricSpecs[index]),
+    value: index === 0 ? primaryGoal?.name ?? dynamic.noGoals : index === 1 ? contributionValue(primaryCalculation) : index === 2 ? primaryGoal && primaryCalculation ? money(primaryGoal.savedAmount) : "—" : availableCapacity !== null ? `${money(availableCapacity)} / ${dynamic.month}` : "—",
+    detail: index === 0 ? primaryGoal ? `${formatGoalTargetDate(primaryGoal.targetDate, language)} · ${primaryGoal.priority} ${dynamic.goal}` : emptyCopy.createFirst : index === 1 ? contributionDetail(primaryCalculation, primaryGoal?.targetDate) : index === 2 ? primaryCalculation ? `${percentage(primaryCalculation.progressRatio)} ${dynamic.complete} · ${money(primaryCalculation.remainingAmount)} ${dynamic.remaining}` : emptyCopy.noProgress : !primaryGoal ? emptyCopy.noSavingsPlan : availableCapacity !== null && availableCapacity > 0 ? `${dynamic.room} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}` : dynamic.noCapacity,
   }));
-  const liveContributionCopy = selectedPlan && selectedPlanImpact ? `${dynamic.planActive} · ${money(selectedPlan.monthlyTarget)}/${dynamic.month} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(selectedPlanImpact.estimatedMonthsEarlier)} ${dynamic.earlier}${selectedCalculation && isGoalContributionPlanStale(selectedPlan, selectedCalculation.requiredMonthlyContribution, savingsCapacity.safeMonthlyCapacity) ? ` · ${dynamic.review}` : ""}.` : savingsCapacity.canContribute ? `${dynamic.found} ${money(savingsCapacity.safeMonthlyCapacity)}/${dynamic.month} ${dynamic.roomInBudget}` : dynamic.attention;
-  const capacityContextCopy = savingsCapacity.source === "active_adjustment" ? dynamic.adjustment : `${dynamic.headroom} ${money(savingsCapacity.rawCapacity)}; ${dynamic.buffer}`;
-  const impactCopy = availableCapacity > 0 ? `${dynamic.directing} ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}.` : dynamic.noImpact;
+  const liveContributionCopy = selectedPlan && selectedPlanImpact ? `${dynamic.planActive} · ${money(selectedPlan.monthlyTarget)}/${dynamic.month} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(selectedPlanImpact.estimatedMonthsEarlier)} ${dynamic.earlier}${selectedCalculation && savingsCapacity.available && isGoalContributionPlanStale(selectedPlan, selectedCalculation.requiredMonthlyContribution, savingsCapacity.safeMonthlyCapacity) ? ` · ${dynamic.review}` : ""}.` : savingsCapacity.available && savingsCapacity.canContribute ? `${dynamic.found} ${money(savingsCapacity.safeMonthlyCapacity)}/${dynamic.month} ${dynamic.roomInBudget}` : dynamic.attention;
+  const capacityContextCopy = savingsCapacity.source === "active_adjustment" ? dynamic.adjustment : savingsCapacity.available ? `${dynamic.headroom} ${money(savingsCapacity.rawCapacity)}; ${dynamic.buffer}` : dynamic.attention;
+  const impactCopy = availableCapacity !== null && availableCapacity > 0 ? `${dynamic.directing} ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}.` : dynamic.noImpact;
   const nextBestActions = primaryGoal ? actionIcons.map((icon, index) => ({ text: [liveContributionCopy, capacityContextCopy, impactCopy][index], icon })) : [];
 
   async function createGoal(values: Omit<Goal, "id">) {
@@ -114,8 +118,10 @@ export default function GoalsPage() {
   }
 
   async function applySavingsPlan() {
-    if (!planGoal || !planCalculation || planCalculation.isCompleted || planCalculation.isPastDue || planCalculation.requiredMonthlyContribution === null || planCalculation.requiredMonthlyContribution <= 0 || savingsCapacity.safeMonthlyCapacity <= 0) return;
-    const monthlyTarget = planCalculation.requiredMonthlyContribution + savingsCapacity.safeMonthlyCapacity;
+    if (!savingsCapacity.available || !planGoal || !planCalculation || planCalculation.isCompleted || planCalculation.isPastDue || planCalculation.requiredMonthlyContribution === null || planCalculation.requiredMonthlyContribution <= 0 || savingsCapacity.safeMonthlyCapacity <= 0) return;
+    const monthlyTargetResult = calculateGoalPlanMonthlyTarget(planCalculation.requiredMonthlyContribution, savingsCapacity.safeMonthlyCapacity);
+    if (!monthlyTargetResult.available) return;
+    const monthlyTarget = monthlyTargetResult.value;
     if (!Number.isFinite(monthlyTarget) || monthlyTarget <= 0) return;
     try {
       await upsertGoalContributionPlan({ goalId: planGoal.id, monthlyTarget, baselineRequiredMonthlyContribution: planCalculation.requiredMonthlyContribution, savingsBoost: savingsCapacity.safeMonthlyCapacity, createdAt: new Date().toISOString() });
@@ -129,13 +135,11 @@ export default function GoalsPage() {
     <main className="min-h-screen overflow-hidden bg-[#080B0F] text-[#F5F7FA]">
       <DesktopScaleCanvas>
         <div className="relative h-[1024px] w-[1536px] overflow-hidden">
-          <section className="absolute left-[231px] top-[107px] flex h-[810px] w-[1164px] items-center justify-center overflow-hidden rounded-[38px] border border-[#28313B]/16 bg-[#0D1117]/50 px-[32px] py-[16px] shadow-[0_22px_42px_rgba(0,0,0,0.45)] backdrop-blur-[20px]">
+          <DesktopInternalPagePanel className="flex items-center justify-center">
             <div className="flex h-[779.67px] w-[1098px] shrink-0 flex-col gap-[12px]">
-              <div className="flex h-[36.75px] shrink-0 items-center gap-[18.375px]"><span className="h-[36.75px] w-[36.75px] shrink-0 overflow-hidden"><Image src="/moneypilot/moneypilot-logo.svg" alt="" width={180} height={40} priority className="h-[36.75px] w-auto max-w-none" /></span><span className="money-pilot-wordmark font-brand text-[21.44px] font-medium leading-[26.031px] tracking-[0.4288px]">MoneyPilot</span></div>
+              <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[520px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{t.title}</h1><p className="text-[13.2px] text-[#9CA6B2]">{t.description}</p></div><div className="flex h-[52px] w-[220px] items-center justify-end gap-[16px]"><button type="button" onClick={() => setModal({ mode: "create" })} className="h-[38px] w-[132px] rounded-[19px] bg-[#3B82F6] text-[12.5px] font-semibold">{t.newGoal}</button></div></header>
 
-              <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[520px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{t.title}</h1><p className="text-[13.2px] text-[#9CA6B2]">{t.description}</p></div><div className="flex h-[52px] w-[220px] items-center justify-end gap-[16px]"><button type="button" onClick={() => setModal({ mode: "create" })} className="h-[38px] w-[132px] rounded-[19px] bg-[#3B82F6] text-[12.5px] font-semibold">{t.newGoal}</button><Image src="/moneypilot/dashboard-avatar.png" alt={t.userAvatar} width={52} height={52} className="size-[52.128px] rounded-full" /></div></header>
-
-              <section aria-label={t.summaryAria} className="flex h-[115px] shrink-0 gap-[12px]">{goalSummaryMetrics.map((metric) => <article key={metric.label} className={`${cardClass} flex h-[115px] w-[265.5px] shrink-0 flex-col gap-[6px] p-[12px]`}><div className="flex h-[24px] items-center gap-[8px] text-[11.5px] font-medium text-[#9CA6B2]"><Image src={`${iconRoot}/${metric.icon}`} alt="" width={24} height={24} className="size-[24px]" />{metric.label}</div><strong className="truncate text-[20px] font-semibold leading-none">{metric.value}</strong><span className="truncate text-[10.5px] text-[#9CA6B2]">{metric.detail}</span>{metric.progress && <div className="h-[5px] w-[241.5px] rounded-[2.5px] bg-[#28313B]/90"><div className="h-[5px] rounded-[2.5px] bg-[#22C55E]" style={{ width: `${primaryCalculation?.progressPercent ?? 0}%` }} /></div>}</article>)}</section>
+              <section aria-label={t.summaryAria} className="flex h-[115px] shrink-0 gap-[12px]">{goalSummaryMetrics.map((metric) => <article key={metric.label} className={`${cardClass} flex h-[115px] w-[265.5px] shrink-0 flex-col gap-[6px] p-[12px]`}><div className="flex h-[24px] items-center gap-[8px] text-[11.5px] font-medium text-[#9CA6B2]"><Image src={`${iconRoot}/${metric.icon}`} alt="" width={24} height={24} className="size-[24px]" />{metric.label}</div><strong className="truncate text-[20px] font-semibold leading-none">{metric.value}</strong><span className="truncate text-[10.5px] text-[#9CA6B2]">{metric.detail}</span>{metric.progress && <div className="h-[5px] w-[241.5px] rounded-[2.5px] bg-[#28313B]/90"><div className="h-[5px] rounded-[2.5px] bg-[#22C55E]" style={{ width: `${primaryCalculation?.visualProgressPercent ?? 0}%` }} /></div>}</article>)}</section>
 
               <section className="flex h-[210px] shrink-0 gap-[12px]">
                 <article className={`${cardClass} flex h-[210px] w-[677px] shrink-0 flex-col items-center justify-between p-[14px]`}>
@@ -154,13 +158,13 @@ export default function GoalsPage() {
 
               <section className={`${cardClass} flex h-[78px] w-[1098px] shrink-0 items-center gap-[18px] p-[12px]`}><div className="flex h-[54px] w-[160px] shrink-0 flex-col justify-center gap-[4px]"><h2 className="text-[14.5px] font-semibold">{emptyCopy.actionPlan}</h2><p className="text-[9.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.unavailable : emptyCopy.noActionPlan}</p></div><p className="flex-1 text-[10.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.actionsUnavailable : emptyCopy.createForActions}</p>{!primaryGoal && <button type="button" onClick={() => setModal({ mode: "create" })} className="h-[30px] rounded-[15px] bg-[#3B82F6] px-[24px] text-[10.5px] font-semibold">{t.newGoal}</button>}</section>
             </div>
-          </section>
+          </DesktopInternalPagePanel>
         </div>
       </DesktopScaleCanvas>
       {modal?.mode === "create" && <GoalModal mode="create" goals={goals} onClose={() => setModal(null)} onSubmit={createGoal} />}
       {modal?.mode === "edit" && editedGoal && <GoalModal mode="edit" goal={editedGoal} goals={goals} onClose={() => setModal(null)} onSubmit={editGoal} onRequestDelete={() => { setDeleteGoalId(editedGoal.id); setModal(null); }} />}
       {goalToDelete && <DeleteGoalModal goal={goalToDelete} language={language} onClose={() => setDeleteGoalId(null)} onConfirm={confirmDelete} />}
-      {planGoal && planCalculation && <GoalSavingsPlanModal goal={planGoal} calculation={planCalculation} savingsBoost={savingsCapacity.safeMonthlyCapacity} existingPlan={goalContributionPlans[planGoal.id]} language={language} onClose={() => setPlanGoalId(null)} onApply={applySavingsPlan} />}
+      {planGoal && planCalculation && savingsCapacity.available && <GoalSavingsPlanModal goal={planGoal} calculation={planCalculation} savingsBoost={savingsCapacity.safeMonthlyCapacity} existingPlan={goalContributionPlans[planGoal.id]} language={language} onClose={() => setPlanGoalId(null)} onApply={applySavingsPlan} />}
       {feedback && <div role="status" className="fixed bottom-[28px] left-1/2 z-[70] -translate-x-1/2 rounded-[18px] border border-[#22C55E]/30 bg-[var(--background-elevated)] px-[22px] py-[10px] text-[10px] font-semibold text-[#22C55E] shadow-lg">{feedback}</div>}
     </main>
   );

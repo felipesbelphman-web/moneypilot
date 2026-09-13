@@ -1,23 +1,18 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { mapProfilePersistenceError, type UserProfile } from "@/lib/auth/profile-contract";
+import { ProfileRepository } from "@/lib/auth/profile-repository";
 
-export type UserProfile = {
-  id: string;
-  display_name: string | null;
-  locale: string;
-  currency_code: string;
-  has_seen_welcome: boolean;
-  created_at: string;
-  updated_at: string;
-};
+export type { UserProfile } from "@/lib/auth/profile-contract";
 
 export type CurrentAccount = {
   email: string;
   profile: UserProfile;
+  avatarUrl: string | null;
 };
 
-export async function getCurrentAccount(): Promise<CurrentAccount> {
+export async function getOptionalCurrentAccount(): Promise<CurrentAccount | null> {
   const supabase = await createClient();
 
   const { data: claimsData, error: claimsError } =
@@ -25,31 +20,50 @@ export async function getCurrentAccount(): Promise<CurrentAccount> {
 
   const userId = claimsData?.claims?.sub;
 
-  if (claimsError || !userId) {
-    redirect("/auth?mode=login");
+  if (claimsError) {
+    throw mapProfilePersistenceError(claimsError);
+  }
+  if (!userId) {
+    return null;
   }
 
   const { data: userData, error: userError } =
     await supabase.auth.getUser();
 
-  if (userError || !userData.user?.email) {
-    redirect("/auth?mode=login");
+  if (userError) {
+    throw mapProfilePersistenceError(userError);
+  }
+  if (!userData.user?.email) {
+    return null;
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select(
-  "id, display_name, locale, currency_code, has_seen_welcome, created_at, updated_at",
-)
-    .eq("id", userId)
-    .single<UserProfile>();
+  const profile = await new ProfileRepository(supabase).getProfile(userId);
 
-  if (profileError) {
-    throw new Error(`Failed to load user profile: ${profileError.message}`);
+  let avatarUrl: string | null = null;
+
+  if (profile.avatar_path) {
+    const { data: signedAvatar, error: avatarError } = await supabase.storage
+      .from("avatars")
+      .createSignedUrl(profile.avatar_path, 60 * 60);
+
+    if (avatarError) throw mapProfilePersistenceError(avatarError);
+
+    avatarUrl = signedAvatar?.signedUrl ?? null;
   }
 
   return {
     email: userData.user.email,
     profile,
+    avatarUrl,
   };
+}
+
+export async function getCurrentAccount(): Promise<CurrentAccount> {
+  const account = await getOptionalCurrentAccount();
+
+  if (!account) {
+    redirect("/auth?mode=login");
+  }
+
+  return account;
 }

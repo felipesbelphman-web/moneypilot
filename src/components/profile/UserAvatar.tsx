@@ -1,15 +1,14 @@
 "use client";
 
-import Image from "next/image";
-
 type UserAvatarProps = {
   name?: string | null;
   email?: string | null;
   avatarUrl?: string | null;
+  avatarMode?: "photo" | "initials";
   size?: number;
 };
 
-function getInitials(name?: string | null, email?: string | null) {
+export function getInitials(name?: string | null, email?: string | null) {
   const cleanName = name?.trim();
 
   if (cleanName) {
@@ -31,6 +30,7 @@ export function UserAvatar({
   name,
   email,
   avatarUrl,
+  avatarMode = "initials",
   size = 48,
 }: UserAvatarProps) {
   const initials = getInitials(name, email);
@@ -44,13 +44,11 @@ export function UserAvatar({
       }}
       aria-label={name || email || "User profile"}
     >
-      {avatarUrl ? (
-        <Image
+      {avatarMode === "photo" && avatarUrl ? (
+        <img
           src={avatarUrl}
           alt={name || "Profile photo"}
-          fill
-          sizes={`${size}px`}
-          className="object-cover"
+          className="absolute inset-0 size-full object-cover"
         />
       ) : (
         <span className="select-none text-[15px] font-semibold leading-none text-white">

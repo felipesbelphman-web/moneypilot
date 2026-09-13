@@ -1,4 +1,5 @@
 import type { TransactionType } from "./transaction-model";
+import { parseCsvAmountText } from "../../lib/domain/financial-input-adapters.ts";
 
 export type ImportedTransactionDraft = {
   id: string;
@@ -85,20 +86,7 @@ export function parseImportedDate(value: string) {
 }
 
 export function parseImportedAmount(value: string) {
-  let compact = value.trim().replace(/(?:R\$|€|£|\$|EUR|GBP|USD|BRL|\s|\u00a0)/gi, "");
-  const parentheses = compact.startsWith("(") && compact.endsWith(")");
-  if (parentheses) compact = compact.slice(1, -1);
-  const negative = parentheses || compact.startsWith("-");
-  compact = compact.replace(/^[+-]/, "");
-  if (!compact) return null;
-  const comma = compact.lastIndexOf(",");
-  const dot = compact.lastIndexOf(".");
-  const decimal = comma > dot ? "," : ".";
-  const thousands = decimal === "," ? "." : ",";
-  const normalized = compact.includes(decimal) ? compact.replaceAll(thousands, "").replace(decimal, ".") : compact;
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null;
-  const amount = Number(normalized);
-  return Number.isFinite(amount) ? (negative ? -amount : amount) : null;
+  return parseCsvAmountText(value);
 }
 
 export function parseImportedType(value: string) {

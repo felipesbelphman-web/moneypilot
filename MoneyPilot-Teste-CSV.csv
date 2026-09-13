@@ -1,0 +1,9 @@
+date;description;amount;type;category
+2026-01-10;TESTE Receita janeiro;1000.00;income;Renda teste
+2026-01-12;TESTE Mercado janeiro;100.00;expense;Mercado teste
+2026-04-10;TESTE Receita abril;2000.00;income;Renda teste
+2026-04-11;TESTE Moradia abril;500.00;expense;Moradia teste
+2026-04-15;TESTE Mercado abril;100.00;expense;Mercado teste
+2026-08-10;TESTE Receita agosto;1500.00;income;Renda teste
+2026-08-11;TESTE Mercado agosto;200.00;expense;Mercado teste
+2026-08-12;TESTE Transporte agosto;100.00;expense;Transporte teste

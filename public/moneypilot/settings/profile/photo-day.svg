@@ -1,0 +1,18 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Photo icon group">
+<circle id="Icon background" cx="12" cy="12" r="12" fill="#3B82F6"/>
+<g id="icon / tabler-icons / photo" clip-path="url(#clip0_0_122)">
+<g id="Vector">
+</g>
+<path id="Vector_2" d="M14.0999 9.2H14.1069" stroke="#E5E5E5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M15.4998 6.3998H8.4998C7.34001 6.3998 6.3998 7.34001 6.3998 8.4998V15.4998C6.3998 16.6596 7.34001 17.5998 8.4998 17.5998H15.4998C16.6596 17.5998 17.5998 16.6596 17.5998 15.4998V8.4998C17.5998 7.34001 16.6596 6.3998 15.4998 6.3998Z" stroke="#E5E5E5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_4" d="M6.3998 14.0999L9.1998 11.2999C9.51904 10.9927 9.88118 10.831 10.2498 10.831C10.6184 10.831 10.9806 10.9927 11.2998 11.2999L14.7998 14.7999" stroke="#E5E5E5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_5" d="M13.4 13.4L14.1 12.7C14.4192 12.3928 14.7814 12.2311 15.15 12.2311C15.5186 12.2311 15.8808 12.3928 16.2 12.7L17.6 14.1" stroke="#E5E5E5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_122">
+<rect width="16.8" height="16.8" fill="white" transform="translate(3.6 3.6)"/>
+</clipPath>
+</defs>
+</svg>

@@ -6,16 +6,22 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:unit": "node --experimental-strip-types --test \"tests/unit/*.test.mts\"",
+    "test:rls": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.test.local --experimental-strip-types tests/integration/rls/run.mjs",
+    "test:rls:categories": "node --env-file-if-exists=.env.local --env-file-if-exists=.env.test.local --experimental-strip-types tests/integration/rls/run-category-transactions.mjs"
   },
   "dependencies": {
+    "@openai/agents": "^0.17.0",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "@tabler/icons-react": "^3.46.0",
+    "apexcharts": "^7.1.0",
     "iconoir-react": "^7.12.1",
     "lucide-react": "^1.33.0",
     "next": "16.3.1",
     "react": "19.2.8",
+    "react-apexcharts": "^2.1.1",
     "react-dom": "19.2.8",
     "react-icons": "^5.7.0",
     "recharts": "^3.10.1"

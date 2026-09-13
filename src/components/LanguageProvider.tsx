@@ -11,8 +11,11 @@ import {
 } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { isLanguage, type Language } from "@/i18n/config";
+import { ProfileRepository } from "@/lib/auth/profile-repository";
+import { settleProfilePreferenceLoad } from "@/lib/auth/profile-contract";
 
-export type Language = "en" | "pt" | "es" | "de" | "fr" | "nl" | "it";
+export type { Language } from "@/i18n/config";
 
 type LanguageContextValue = {
   language: Language;
@@ -29,9 +32,7 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(
   undefined,
 );
 
-export function isLanguage(value: string | null): value is Language {
-  return value === "en" || value === "pt" || value === "es" || value === "de" || value === "fr" || value === "nl" || value === "it";
-}
+export { isLanguage } from "@/i18n/config";
 
 export function LanguageProvider({ children }: LanguageProviderProps) {
   const [language, setLanguageState] = useState<Language>("en");
@@ -61,6 +62,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
 
   useEffect(() => {
     const supabase = createClient();
+    const repository = new ProfileRepository(supabase);
     let active = true;
 
     async function applyAccountLanguage() {
@@ -69,15 +71,9 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
 
       if (!active || !userId) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("locale")
-        .eq("id", userId)
-        .single<{ locale: string }>();
-
-      const profileLocale = profile?.locale ?? null;
-      if (active && isLanguage(profileLocale)) {
-        setLanguage(profileLocale);
+      const result = await settleProfilePreferenceLoad(() => repository.getPreferences(userId));
+      if (active && result.status === "success") {
+        setLanguage(result.data.locale);
       }
     }
 

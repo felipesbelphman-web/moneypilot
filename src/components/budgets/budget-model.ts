@@ -1,6 +1,8 @@
-import type { Transaction } from "@/components/transactions/transaction-model";
+import type { Transaction } from "../transactions/transaction-model.ts";
+import { calculateBudgetIndicatorStatus, type BudgetIndicatorStatus } from "./budget-period.ts";
+import { aggregateMoney } from "../../lib/domain/money-aggregation.ts";
 
-export type BudgetStatus = "Dentro do plano" | "No controle" | "Atenção" | "Perto do limite" | "Estourado";
+export type BudgetStatus = BudgetIndicatorStatus;
 
 export type Budget = {
   id: string;
@@ -12,8 +14,8 @@ export type Budget = {
 };
 
 export type BudgetWithProgress = Budget & {
-  spent: number;
-  status: BudgetStatus;
+  spent: number | null;
+  status: BudgetStatus | null;
 };
 
 export type BudgetAdjustment = {
@@ -30,21 +32,17 @@ export function normalizeCategory(category: string) {
 
 export function calculateBudgetSpent(budget: Pick<Budget, "category" | "month">, transactions: Transaction[]) {
   const category = normalizeCategory(budget.category);
-
-  return transactions.reduce((total, transaction) => {
+  return aggregateMoney(transactions.flatMap((transaction) => {
     const matches = transaction.type === "expense"
+      && transaction.classification.kind !== "uncategorized"
+      && transaction.category !== null
       && normalizeCategory(transaction.category) === category
       && transaction.dateISO.slice(0, 7) === budget.month;
 
-    return matches ? total + transaction.amount : total;
-  }, 0);
+    return matches ? [transaction.amount] : [];
+  }));
 }
 
-export function calculateBudgetStatus(budget: number, spent: number): BudgetStatus {
-  const usage = spent / budget;
-  if (usage > 1) return "Estourado";
-  if (usage === 1) return "Dentro do plano";
-  if (usage >= 0.9) return "Perto do limite";
-  if (usage >= 0.8) return "Atenção";
-  return "No controle";
+export function calculateBudgetStatus(budget: number, spent: number | null, canProject = false, monthElapsedRatio = 0): BudgetStatus | null {
+  return spent === null ? null : calculateBudgetIndicatorStatus(budget, spent, canProject, monthElapsedRatio);
 }

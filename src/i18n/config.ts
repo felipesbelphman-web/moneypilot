@@ -1,4 +1,8 @@
-import type { Language } from "@/components/LanguageProvider";
+export type Language = "en" | "pt" | "es" | "de" | "fr" | "nl" | "it";
+
+export function isLanguage(value: string | null): value is Language {
+  return value === "en" || value === "pt" || value === "es" || value === "de" || value === "fr" || value === "nl" || value === "it";
+}
 
 export const supportedLanguages = [
   { code: "en", label: "English" }, { code: "pt", label: "Português" }, { code: "es", label: "Español" },

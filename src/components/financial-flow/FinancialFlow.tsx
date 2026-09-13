@@ -8,18 +8,44 @@ import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
 import type { AppTranslation } from "@/i18n/app-translations";
 import type { DashboardCategorySpending } from "@/components/dashboard/dashboard-financial-summary";
+import { getTransactionCategoryGroupKey, type Transaction } from "@/components/transactions/transaction-model";
+import { buildFinancialFlowSeries, unavailableFinancialFlowSeries, type FinancialFlowPoint } from "@/components/financial-flow/financial-flow-series";
+import { aggregateMoney } from "@/lib/domain/money-aggregation";
+import { FinancialFlowAreaChart } from "@/components/financial-flow/FinancialFlowAreaChart";
+import { FinancialFlowColumnChart } from "@/components/financial-flow/FinancialFlowColumnChart";
+import { ApexDonutChart } from "@/components/charts/ApexDonutChart";
 
 type FinancialTab = "balance" | "income" | "expense";
 type FinancialView = "bars" | "donut" | "trend";
 
+type FinancialFlowProps =
+    | { demo: true }
+    | {
+          demo?: false;
+          month: string;
+          aggregationAvailable: boolean;
+          categoryAggregationAvailable: boolean;
+          transactions: Transaction[];
+          income: number | null;
+          incomeAveragePerDay: number | null;
+          largestIncome: number | null;
+          expenses: number | null;
+          netCashFlow: number | null;
+          categorySpending: DashboardCategorySpending[];
+          showValues?: boolean;
+      };
+
 const dates = [15, 16, 17, 18, 19, 20, 21];
+const demoTrendDates = dates.map((day) => `2026-08-${String(day).padStart(2, "0")}`);
+const categoryColors = ["#F43F5E", "#E11D48", "#FB7185", "#BE123C", "#FDA4AF"];
+const incomeCategoryColors = ["#22C55E", "#16A34A", "#4ADE80", "#15803D", "#86EFAC"];
 
 const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value: number) => string) => ({
     balance: {
-        accent: "#3B82F6",
-        secondary: "#60A5FA",
-        glow: "rgba(59,130,246,0.34)",
-        soft: "rgba(59,130,246,0.08)",
+        accent: "var(--dashboard-chart-primary)",
+        secondary: "var(--dashboard-chart-secondary)",
+        glow: "color-mix(in srgb, var(--dashboard-chart-primary) 34%, transparent)",
+        soft: "var(--dashboard-brand-soft)",
 
         rows: [
             {
@@ -37,8 +63,8 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
             {
                 label: t.labels.accountBalance,
                 value: money(2480.75),
-                color: "#3B82F6",
-                dot: "#3B82F6",
+                color: "var(--dashboard-chart-primary)",
+                dot: "var(--dashboard-chart-primary)",
             },
         ],
 
@@ -64,25 +90,25 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
                 label: t.labels.mainAccount,
                 value: money(1120),
                 percent: 45.1,
-                color: "#3B82F6",
+                color: "var(--dashboard-chart-primary)",
             },
             {
                 label: t.savings,
                 value: money(780),
                 percent: 31.4,
-                color: "#2563EB",
+                color: "var(--dashboard-brand-primary-hover)",
             },
             {
                 label: "Revolut",
                 value: money(330),
                 percent: 13.3,
-                color: "#60A5FA",
+                color: "var(--dashboard-chart-secondary)",
             },
             {
                 label: t.labels.investments,
                 value: money(200),
                 percent: 8.1,
-                color: "#1D4ED8",
+                color: "var(--dashboard-brand-primary-active)",
             },
             {
                 label: t.labels.wallet,
@@ -121,13 +147,13 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
             {
                 label: t.averagePerDay,
                 value: money(521.43),
-                color: "#F5F7FA",
+                color: "var(--text-primary)",
                 dot: "#15803D",
             },
             {
                 label: t.labels.largestIncome,
                 value: money(920),
-                color: "#F5F7FA",
+                color: "var(--text-primary)",
                 dot: "#22C55E",
             },
         ],
@@ -286,29 +312,25 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
     },
 });
 
-function buildDonutBackground(
-    items: readonly {
-        percent: number;
-        color: string;
-    }[],
-) {
-    let start = 0;
-
-    const sections = items.map((item) => {
-        const end = start + item.percent;
-        const result = `${item.color} ${start}% ${end}%`;
-        start = end;
-        return result;
-    });
-
-    return `conic-gradient(${sections.join(", ")})`;
+function buildDistribution(items: { label: string; amount: number }[], total: number, colors: string[], money: (value: number) => string) {
+    const sorted = items.filter((item) => item.amount > 0).sort((left, right) => right.amount - left.amount);
+    const overflow = aggregateMoney(sorted.slice(4).map((item) => item.amount));
+    if (!overflow.available) return [];
+    const visible = sorted.length <= 5 ? sorted.map((item) => ({ ...item, composition: undefined as string[] | undefined })) : [
+        ...sorted.slice(0, 4).map((item) => ({ ...item, composition: undefined as string[] | undefined })),
+        { label: "", amount: overflow.value, composition: sorted.slice(4).map((item) => item.label) },
+    ];
+    return visible.map((item, index) => ({ ...item, value: money(item.amount), percent: total > 0 ? (item.amount / total) * 100 : 0, color: colors[index % colors.length] }));
 }
 
-export function FinancialFlow({ income, expenses, netCashFlow, categorySpending, showValues = true }: { income?: number; expenses?: number; netCashFlow?: number; categorySpending?: DashboardCategorySpending[]; showValues?: boolean }) {
+export function FinancialFlow(props: FinancialFlowProps) {
     const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
     const appT = translations[language];
     const t = appT.financialFlow;
+    const dashboardT = appT.appDashboard;
+    const demo = props.demo === true;
+    const showValues = demo ? true : (props.showValues ?? true);
     const [financialTab, setFinancialTab] =
         useState<FinancialTab>("balance");
 
@@ -316,57 +338,103 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
         useState<FinancialView>("bars");
 
     const financialFlowData = getFinancialFlowData(t, money);
-    if (income !== undefined && expenses !== undefined && netCashFlow !== undefined) {
-        financialFlowData.balance.rows[0].value = money(income);
-        financialFlowData.balance.rows[1].value = money(expenses);
-        financialFlowData.balance.rows[2].label = "Net cash flow";
-        financialFlowData.balance.rows[2].value = money(netCashFlow);
-        financialFlowData.income.rows[0].value = money(income);
-        financialFlowData.income.rows[1].value = "—";
-        financialFlowData.income.rows[2].value = "—";
-        financialFlowData.expense.rows[0].value = money(expenses);
-        financialFlowData.expense.rows[1].value = categorySpending?.[0] ? `${categorySpending[0].category} · ${(categorySpending[0].percentage * 100).toFixed(1)}%` : "—";
-        financialFlowData.expense.rows[2].value = String(categorySpending?.length ?? 0);
+    let dailySeries: FinancialFlowPoint[] = [];
+    let seriesAvailable = true;
+    if (!demo) {
+        const { month, transactions, aggregationAvailable, categoryAggregationAvailable, income, incomeAveragePerDay, largestIncome, expenses, netCashFlow, categorySpending } = props;
+        const [year, monthNumber] = month.split("-");
+        const periodLabel = `${t.months[Number(monthNumber) - 1]} ${year}`;
+        const series = aggregationAvailable && income !== null && expenses !== null && netCashFlow !== null
+            ? buildFinancialFlowSeries({ month, transactions, expectedTotals: { income, expenses, netCashFlow } })
+            : unavailableFinancialFlowSeries("invalid_operand");
+        dailySeries = series.points;
+        seriesAvailable = series.available;
+        financialFlowData.balance.rows[0].value = aggregationAvailable && income !== null ? money(income) : "—";
+        financialFlowData.balance.rows[1].value = aggregationAvailable && expenses !== null ? money(expenses) : "—";
+        financialFlowData.balance.rows[2].label = dashboardT.netCashFlow;
+        financialFlowData.balance.rows[2].value = aggregationAvailable && netCashFlow !== null ? money(netCashFlow) : "—";
+        financialFlowData.income.rows[0].value = aggregationAvailable && income !== null ? money(income) : "—";
+        financialFlowData.income.rows[1].value = incomeAveragePerDay === null ? dashboardT.incomeIndicatorUnavailable : money(incomeAveragePerDay);
+        financialFlowData.income.rows[2].value = largestIncome === null ? dashboardT.noIncomeRecorded : money(largestIncome);
+        financialFlowData.expense.rows[0].value = aggregationAvailable && expenses !== null ? money(expenses) : "—";
+        financialFlowData.expense.rows[1].value = categoryAggregationAvailable && categorySpending[0] ? `${categorySpending[0].localizationKey ? dashboardT[categorySpending[0].localizationKey] : categorySpending[0].category} · ${(categorySpending[0].percentage * 100).toFixed(1)}%` : "—";
+        financialFlowData.expense.rows[2].value = categoryAggregationAvailable ? String(categorySpending.length) : "—";
+        financialFlowData.expense.rows[1].color = "var(--text-primary)";
+        financialFlowData.expense.rows[2].color = "var(--text-primary)";
         for (const tab of ["balance", "income", "expense"] as const) {
             const value = tab === "balance" ? netCashFlow : tab === "income" ? income : expenses;
-            financialFlowData[tab].bars = dates.map(() => [0, 0]);
-            financialFlowData[tab].comparisonLabel = "Current month";
+            financialFlowData[tab].bars = [];
+            financialFlowData[tab].comparisonLabel = periodLabel;
             financialFlowData[tab].comparison = "";
             financialFlowData[tab].direction = "•";
-            financialFlowData[tab].donutTitle = tab === "balance" ? "Net cash flow" : tab === "income" ? t.income : t.expenses;
-            financialFlowData[tab].donutValue = money(value);
-            financialFlowData[tab].donutMeta = "Current month";
-            financialFlowData[tab].donut = [{ label: financialFlowData[tab].donutTitle, value: money(value), percent: 100, color: financialFlowData[tab].accent }];
-            financialFlowData[tab].total = money(value);
-            financialFlowData[tab].trend.value = money(value);
+            financialFlowData[tab].donutTitle = tab === "balance" ? dashboardT.netCashFlow : tab === "income" ? t.income : t.expenses;
+            financialFlowData[tab].donutValue = aggregationAvailable && value !== null ? money(value) : "—";
+            financialFlowData[tab].donutMeta = periodLabel;
+            financialFlowData[tab].donut = [];
+            financialFlowData[tab].total = aggregationAvailable && value !== null ? money(value) : "—";
+            financialFlowData[tab].trend.value = aggregationAvailable && value !== null ? money(value) : "—";
             financialFlowData[tab].trend.change = "";
-            financialFlowData[tab].trend.delta = "Historical series unavailable";
-            financialFlowData[tab].trend.values = dates.map(() => 0);
-            financialFlowData[tab].trend.yLabels = ["", "", "", ""];
+            financialFlowData[tab].trend.delta = dashboardT.historicalSeriesUnavailable;
+            financialFlowData[tab].trend.values = [];
+            financialFlowData[tab].trend.yLabels = [];
+        }
+
+        if (categoryAggregationAvailable && expenses !== null && expenses > 0) {
+            const expenseItems = categorySpending
+                .filter((item) => item.amount > 0 && item.percentage > 0)
+                .map((item) => ({
+                    label: item.localizationKey ? dashboardT[item.localizationKey] : item.category,
+                    amount: item.amount,
+                }));
+            const expenseDistribution = buildDistribution(expenseItems, expenses, categoryColors, money).map((item) => item.label ? item : { ...item, label: dashboardT.other });
+            const distributionPercent = expenseDistribution.reduce((total, item) => total + item.percent, 0);
+            if (Math.abs(distributionPercent - 100) < 0.01) {
+                financialFlowData.expense.donut = expenseDistribution;
+            }
+        }
+
+        if (categoryAggregationAvailable && income !== null && income > 0) {
+            const categories = new Map<string, { label: string; amounts: number[] }>();
+            for (const transaction of transactions) {
+                if (transaction.type !== "income") continue;
+                const category = transaction.category;
+                const key = getTransactionCategoryGroupKey(transaction);
+                const currentCategory = categories.get(key);
+                categories.set(key, {
+                    label: currentCategory?.label ?? (category ?? dashboardT.uncategorized),
+                    amounts: [...(currentCategory?.amounts ?? []), transaction.amount],
+                });
+            }
+            const incomeItems: { label: string; amount: number }[] = [];
+            let incomeDistributionAvailable = true;
+            for (const item of categories.values()) {
+                const total = aggregateMoney(item.amounts);
+                if (!total.available) { incomeDistributionAvailable = false; break; }
+                incomeItems.push({ label: item.label, amount: total.value });
+            }
+            if (incomeDistributionAvailable) financialFlowData.income.donut = buildDistribution(incomeItems, income, incomeCategoryColors, money).map((item) => item.label ? item : { ...item, label: dashboardT.other });
         }
     }
     const current = financialFlowData[financialTab];
+    const hasHistoricalSeries = demo || (!demo && seriesAvailable && props.transactions.length > 0);
+    const hasDistribution = current.donut.length > 0;
 
-    const donutBackground = buildDonutBackground(current.donut);
-
-    const trendMin = Math.min(...current.trend.values);
-    const trendMax = Math.max(...current.trend.values);
-    const trendRange = trendMax - trendMin || 1;
-
-    const trendPoints = current.trend.values
-        .map((value, index) => {
-            const x =
-                (index / (current.trend.values.length - 1)) * 384;
-
-            const y =
-                79 -
-                ((value - trendMin) / trendRange) * 60;
-
-            return `${x},${y}`;
-        })
-        .join(" ");
-
-    const trendAreaPoints = `0,88 ${trendPoints} 384,88`;
+    const barValues = demo
+        ? []
+        : dailySeries.map((point) => financialTab === "balance" ? point.net : financialTab === "income" ? point.income : point.expense);
+    const trendValues = demo
+        ? current.trend.values
+        : dailySeries.map((point) => financialTab === "balance" ? point.cumulativeNet : financialTab === "income" ? point.cumulativeIncome : point.cumulativeExpense);
+    const chartLabel = financialTab === "balance"
+        ? dashboardT.dailyNetFlow
+        : financialTab === "income"
+          ? dashboardT.dailyIncome
+          : dashboardT.dailyExpenses;
+    const trendLabel = financialTab === "balance"
+        ? dashboardT.cumulativeNetFlow
+        : financialTab === "income"
+          ? dashboardT.cumulativeIncome
+          : dashboardT.cumulativeExpenses;
 
     const currentViewIcon =
         financialView === "bars"
@@ -378,6 +446,12 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
     const changeTab = (tab: FinancialTab) => {
         setFinancialTab(tab);
     };
+
+    const renderUnavailable = (message: string) => (
+        <div className="flex h-[142px] w-[415px] shrink-0 items-center justify-center rounded-[14px] border border-[var(--financial-flow-divider)] bg-[var(--financial-summary-surface)] px-[24px] text-center">
+            <p className="text-[10px] font-medium text-[var(--financial-flow-muted)]">{message}</p>
+        </div>
+    );
 
     const renderSummary = () => (
         <div
@@ -418,13 +492,16 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
                                 }}
                             />
 
-                            <span className="text-[8.5px] text-[var(--financial-flow-muted)]">
+                            <span
+                                className="text-[8.5px] text-[var(--financial-flow-muted)]"
+                                title={financialTab === "income" && index === 1 ? dashboardT.incomeAveragePerDayHelp : undefined}
+                            >
                                 {row.label}
                             </span>
                         </div>
 
                         <strong
-                            className="text-[10px] font-semibold"
+                            className="numeric-value text-[10px] font-semibold"
                             style={{
                                 color: row.color,
                             }}
@@ -461,7 +538,7 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
                 </span>
 
                 <strong
-                    className="text-[8px] font-semibold"
+                    className="numeric-value text-[8px] font-semibold"
                     style={{ color: current.accent }}
                 >
                     {current.comparison}
@@ -620,7 +697,7 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
 
                         const tabColor =
                             tab.id === "balance"
-                                ? "#3B82F6"
+                                ? "var(--dashboard-chart-primary)"
                                 : tab.id === "income"
                                   ? "#22C55E"
                                   : "#F43F5E";
@@ -665,54 +742,21 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
                 </div>
             </div>
 
+            {!showValues ? (
+                <div className="flex h-[148px] w-full items-center gap-[24px]">
+                    <div className="w-[150px] shrink-0" />
+                    {renderUnavailable(dashboardT.valuesHidden)}
+                    {renderViewMenu()}
+                </div>
+            ) : <>
             {/* BARRAS */}
             {financialView === "bars" && (
                 <div className="flex h-[148px] w-full items-center gap-[24px]">
                     {renderSummary()}
 
-                    <div className="flex h-[142px] w-[415px] flex-col justify-between">
-                        <div className="flex h-[124px] items-end justify-between">
-                            {current.bars.map(
-                                ([primary, secondary], index) => (
-                                    <div
-                                        key={dates[index]}
-                                        className="flex h-full w-[40px] items-end justify-center"
-                                    >
-                                        <div className="flex items-end gap-[3px]">
-                                            <div
-                                                className="w-[15px] rounded-[7px] transition-all duration-300"
-                                                style={{
-                                                    height: `${primary}px`,
-                                                    backgroundColor:
-                                                        current.accent,
-                                                }}
-                                            />
-
-                                            <div
-                                                className="w-[15px] rounded-[7px] transition-all duration-300"
-                                                style={{
-                                                    height: `${secondary}px`,
-                                                    backgroundColor:
-                                                        current.secondary,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ),
-                            )}
-                        </div>
-
-                        <div className="flex w-full justify-between text-center text-[7px] font-semibold text-[var(--financial-flow-muted)]">
-                            {dates.map((date) => (
-                                <span
-                                    key={date}
-                                    className="w-[40px]"
-                                >
-                                    {date} {t.months[7]}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
+                    {hasHistoricalSeries ? <div className="h-[142px] w-[415px] shrink-0 overflow-visible" aria-label={chartLabel}>
+                        <FinancialFlowColumnChart color={current.accent} datesISO={demo ? demoTrendDates : dailySeries.map((point) => point.dateISO)} label={chartLabel} resetKey={`${demo ? "demo" : props.month}-${financialTab}`} secondaryColor={demo ? current.secondary : undefined} secondaryValues={demo ? current.bars.map(([, secondary]) => secondary) : undefined} tooltipEnabled={!demo} values={demo ? current.bars.map(([primary]) => primary) : barValues} />
+                    </div> : renderUnavailable(dashboardT.noMovementsInPeriod)}
 
                     {renderViewMenu()}
                 </div>
@@ -723,42 +767,9 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
                 <div className="flex h-[148px] w-full items-center gap-[24px]">
                     {renderSummary()}
 
-                    <div className="flex h-[142px] w-[415px] shrink-0 items-center overflow-hidden">
+                    {hasDistribution && showValues ? <div className="flex h-[142px] w-[415px] shrink-0 items-center overflow-hidden">
                     <div className="flex h-[142px] w-[128px] shrink-0 items-center justify-center">
-                        <div className="relative flex h-[120px] w-[120px] items-center justify-center">
-                            <div
-                                className="absolute inset-0 rounded-full"
-                                style={{
-                                    background:
-                                        donutBackground,
-                                }}
-                            />
-
-                            <div className="absolute h-[72px] w-[72px] rounded-full bg-[var(--background-card)]" />
-
-                            <div className="relative z-10 flex flex-col items-center justify-center text-center">
-                                <span className="text-[6.5px] text-[#9CA6B2]">
-                                    {current.donutTitle}
-                                </span>
-
-                                <strong className="mt-[2px] text-[10px] font-semibold text-[#F5F7FA]">
-                                    {showValues ? current.donutValue : "••••••"}
-                                </strong>
-
-                                <span
-                                    className="mt-[2px] text-[7px] font-semibold"
-                                    style={{
-                                        color: current.accent,
-                                    }}
-                                >
-                                    {current.donutMeta}
-                                </span>
-
-                                <span className="mt-[1px] text-[5.5px] text-[#778190]">
-                                    {t.currentDistribution}
-                                </span>
-                            </div>
-                        </div>
+                        <ApexDonutChart items={current.donut.map((item) => ({ label: item.label, value: item.percent, valueLabel: item.value, percent: item.percent, color: item.color, composition: (item as typeof item & { composition?: string[] }).composition }))} totalLabel={current.donutTitle} totalValue={current.donutValue} size={120} />
                     </div>
 
                     <div className="flex h-[142px] w-[287px] shrink-0 flex-col pt-[3px]">
@@ -794,11 +805,11 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
                                     </span>
                                 </div>
 
-                                <span className="text-[#F5F7FA]">
+                                <span className="numeric-value text-[#F5F7FA]">
                                     {showValues ? item.value : "••••••"}
                                 </span>
 
-                                <span className="text-[#9CA6B2]">
+                                <span className="numeric-value text-[#9CA6B2]">
                                     {item.percent.toFixed(1).replace(".", ",")}%
                                 </span>
                             </div>
@@ -826,16 +837,16 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
                                 {current.totalLabel}
                             </strong>
 
-                            <strong className="text-[#F5F7FA]">
+                            <strong className="numeric-value text-[#F5F7FA]">
                                 {showValues ? current.total : "••••••"}
                             </strong>
 
-                            <span className="text-[#9CA6B2]">
+                            <span className="numeric-value text-[#9CA6B2]">
                                 100%
                             </span>
                         </div>
                     </div>
-                    </div>
+                    </div> : renderUnavailable(hasHistoricalSeries ? dashboardT.distributionUnavailable : dashboardT.noMovementsInPeriod)}
 
                     {renderViewMenu()}
                 </div>
@@ -846,156 +857,20 @@ export function FinancialFlow({ income, expenses, netCashFlow, categorySpending,
                 <div className="flex h-[148px] w-full items-center gap-[24px]">
                     {renderSummary()}
 
-                    <div className="relative h-[142px] w-[415px] shrink-0 overflow-hidden">
-                        {/* Header gráfico */}
-                        <div className="absolute left-[8px] top-0 flex items-center gap-[5px]">
-                            <span
-                                className="h-[6px] w-[6px] rounded-full"
-                                style={{
-                                    backgroundColor:
-                                        current.accent,
-                                }}
-                            />
-
-                            <span className="text-[8.5px] font-medium text-[#A9B2BE]">
-                                {current.trend.label}
-                            </span>
-                        </div>
-
-                        <div className="absolute right-[8px] top-0 flex items-center gap-[8px]">
-                            <strong className="text-[10px] font-semibold text-[#F5F7FA]">
-                                {showValues ? current.trend.value : "••••••"}
-                            </strong>
-
-                            <strong
-                                className="text-[8.5px] font-semibold"
-                                style={{
-                                    color: current.accent,
-                                }}
-                            >
-                                {current.trend.change}
-                            </strong>
-                        </div>
-
-                        {/* Grid */}
-                        {[21, 50, 79, 108].map(
-                            (top) => (
-                                <div
-                                    key={top}
-                                    className="absolute left-[8px] h-px w-[384px] bg-[rgba(91,104,120,0.20)]"
-                                    style={{ top }}
-                                />
-                            ),
-                        )}
-
-                        {/* SVG */}
-                        <svg
-                            viewBox="0 0 384 88"
-                            preserveAspectRatio="none"
-                            className="absolute left-[8px] top-[21px] h-[88px] w-[384px] overflow-visible"
-                            aria-hidden="true"
-                        >
-                            <polygon
-                                points={trendAreaPoints}
-                                fill={current.accent}
-                                opacity="0.08"
-                            />
-
-                            <polyline
-                                points={trendPoints}
-                                fill="none"
-                                stroke={current.accent}
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-
-                            {current.trend.values.map(
-                                (value, index) => {
-                                    const x =
-                                        (index /
-                                            (current.trend
-                                                .values.length -
-                                                1)) *
-                                        384;
-
-                                    const y =
-                                        79 -
-                                        ((value - trendMin) /
-                                            trendRange) *
-                                            60;
-
-                                    return (
-                                        <circle
-                                            key={index}
-                                            cx={x}
-                                            cy={y}
-                                            r={
-                                                index ===
-                                                current.trend
-                                                    .values
-                                                    .length -
-                                                    1
-                                                    ? 3.5
-                                                    : 2.5
-                                            }
-                                            fill="#F5F7FA"
-                                            stroke={
-                                                current.accent
-                                            }
-                                            strokeWidth="2"
-                                        />
-                                    );
-                                },
-                            )}
-                        </svg>
-
-                        {/* Valores eixo Y */}
-                        {current.trend.yLabels.map(
-                            (label, index) => (
-                                <span
-                                    key={label}
-                                    className="absolute right-[1px] text-[6.8px] text-[#7A8190]"
-                                    style={{
-                                        top:
-                                            18 +
-                                            index * 29,
-                                    }}
-                                >
-                                    {showValues ? label : "••••••"}
-                                </span>
-                            ),
-                        )}
-
-                        {/* Datas */}
-                        <div className="absolute left-[2px] top-[117px] flex w-[390px] justify-between">
-                            {dates.map((date) => (
-                                <span
-                                    key={date}
-                                    className="w-[40px] text-center text-[6.5px] text-[#8993A1]"
-                                >
-                                    {date} {t.months[7]}
-                                </span>
-                            ))}
-                        </div>
-
-                        <span
-                            className="absolute left-[8px] top-[132px] text-[6.7px] font-medium"
-                            style={{
-                                color: current.accent,
-                            }}
-                        >
-                            {showValues ? current.trend.delta : "••••••"}
-                        </span>
-
-                        <span className="absolute right-[8px] top-[132px] text-[6.7px] text-[#6F7987]">
-                            15–21 {t.months[7]}
-                        </span>
-                    </div>
+                    {hasHistoricalSeries ? <div className="h-[142px] w-[415px] shrink-0 overflow-visible" aria-label={demo ? current.trend.label : trendLabel}>
+                        <FinancialFlowAreaChart
+                            color={current.accent}
+                            datesISO={demo ? demoTrendDates : dailySeries.map((point) => point.dateISO)}
+                            label={demo ? current.trend.label : trendLabel}
+                            resetKey={`${demo ? "demo" : props.month}-${financialTab}`}
+                            values={trendValues}
+                        />
+                    </div> : renderUnavailable(dashboardT.noMovementsInPeriod)}
 
                     {renderViewMenu()}
                 </div>
             )}
+            </>}
         </article>
     );
 }
