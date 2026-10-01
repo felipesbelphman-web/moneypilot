@@ -50,7 +50,7 @@ test("transactions KPIs match dashboard summary totals", () => {
   const transactions = [tx("a", `${month}-01`, "income", 0.1), tx("b", `${month}-02`, "income", 0.2), tx("c", `${month}-03`, "expense", 0.1)]; const kpis = calculateTransactionKpiAggregates(transactions, month); const summary = calculateDashboardFinancialSummary({ transactions, budgets: [], budgetAdjustments: {}, goals: [], goalContributionPlans: {}, month, now: new Date(2026, 8, 15) }); assert.equal(kpis.available, true); assert.equal(summary.aggregationAvailable, true); if (kpis.available && summary.aggregationAvailable) assert.deepEqual({ income: kpis.income, expenses: kpis.expenses, netCashFlow: kpis.netCashFlow }, { income: summary.income, expenses: summary.expenses, netCashFlow: summary.netCashFlow });
 });
 test("real cards narrow availability before formatting or percentage copy", () => {
-  const source = readFileSync(new URL("../../src/components/transactions/TransactionsKpiCards.tsx", import.meta.url), "utf8"); assert.match(source, /aggregates\.available \? money\(aggregates\.expenses\) : "—"/); assert.match(source, /aggregates\.available && aggregates\.incomeUsage\.available/); assert.doesNotMatch(source, /expenseTotal\s*\/|expenseTotal\s*-/);
+  const source = readFileSync(new URL("../../src/components/transactions/TransactionsKpiCards.tsx", import.meta.url), "utf8"); assert.match(source, /aggregates\?\.available \? money\(aggregates\.expenses\) : "—"/); assert.match(source, /aggregates\?\.available && aggregates\.incomeUsage\.available/); assert.doesNotMatch(source, /expenseTotal\s*\/|expenseTotal\s*-/);
 });
 
 test("category integrity preserves literal, accented, Unicode and historical names", () => {

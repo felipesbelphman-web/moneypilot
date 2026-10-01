@@ -10,6 +10,7 @@ import { ThemeProvider, themeBootstrapScript } from "@/components/ThemeProvider"
 import DesktopSidebar, { SidebarLayoutProvider } from "@/components/navigation/DesktopSidebar";
 import { AppShellFrame } from "@/components/layout/AppShellFrame";
 import { getOptionalCurrentAccount } from "@/lib/auth/profile";
+import { settleProfileLoad } from "@/lib/auth/profile-contract";
 
 import "./globals.css";
 
@@ -42,7 +43,8 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const initialAccount = await getOptionalCurrentAccount();
+  const accountLoad = await settleProfileLoad(getOptionalCurrentAccount);
+  const initialAccount = accountLoad.status === "success" ? accountLoad.data : null;
 
   return (
     <html

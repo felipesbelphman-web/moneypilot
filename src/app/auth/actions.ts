@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { classifySignInError } from "@/lib/auth/sign-in-error";
 
 export async function signUp(formData: FormData) {
   const firstName = String(formData.get("firstName") ?? "").trim();
@@ -58,34 +59,16 @@ export async function signIn(formData: FormData) {
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-});
+    email,
+    password,
+  });
 
-if (error) {
-  redirect(`/auth?mode=login&error=${classifySignInError(error)}`);
-}
-
-revalidatePath("/", "layout");
-redirect("/dashboard");
-}
-
-function classifySignInError(error: { code?: string; name: string; status?: number }) {
-  if (error.code === "invalid_credentials") {
-    return "invalid-credentials";
+  if (error) {
+    redirect(`/auth?mode=login&error=${classifySignInError(error)}`);
   }
 
-  if (
-    error.name === "AuthRetryableFetchError" ||
-    error.status === 0 ||
-    error.status === 429 ||
-    (error.status !== undefined && error.status >= 500) ||
-    error.code === "request_timeout"
-  ) {
-    return "auth-unavailable";
-  }
-
-  return "auth-error";
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
 }
 
 export async function signOut() {

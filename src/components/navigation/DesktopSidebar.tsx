@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeft } from "lucide-react";
-import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Menu, PanelLeft, X } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type FocusEvent, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 
 import { signOut } from "@/app/auth/actions";
@@ -12,62 +12,24 @@ import { useLanguage } from "@/components/LanguageProvider";
 import { AccountAvatar } from "@/components/profile/AccountAvatar";
 import { useAccountProfile } from "@/components/profile/AccountProfileProvider";
 import { useTheme } from "@/components/ThemeProvider";
+import { isPrivateRoute } from "@/lib/auth/private-routes";
 import { translations } from "@/i18n/translations";
+import { navigationItems, isNavigationActive, navigationIconPath, type NavigationIcon } from "./navigation-model";
 
-type IconName = "home" | "transactions" | "budgets" | "insights" | "goals" | "investments" | "settings" | "help" | "logout";
 type SidebarLayoutContextValue = { expanded: boolean; setExpanded: (expanded: boolean) => void };
-
-const routes = ["/dashboard", "/transactions", "/budgets", "/insights", "/goals", "/categories", "/investments", "/settings"];
-const icons: Record<IconName, string> = {
-  home: "/moneypilot/navigation/dashboard.svg",
-  transactions: "/moneypilot/navigation/transactions.svg",
-  budgets: "/moneypilot/navigation/budgets.svg",
-  insights: "/moneypilot/navigation/insights.svg",
-  goals: "/moneypilot/navigation/goals.svg",
-  investments: "/moneypilot/navigation/investments.svg",
-  settings: "/moneypilot/navigation/settings.svg",
-  help: "/moneypilot/navigation/help-icon.svg",
-  logout: "/moneypilot/navigation/logout-icon.svg",
-};
 const SidebarLayoutContext = createContext<SidebarLayoutContextValue | undefined>(undefined);
-const SIDEBAR_STORAGE_KEY = "moneypilot-sidebar-expanded";
+const subscribeToClientReady = () => () => {};
+const getClientReadySnapshot = () => true;
+const getServerClientReadySnapshot = () => false;
 
-function subscribeToClientReady() {
-  return () => {};
-}
-
-function getClientReadySnapshot() {
-  return true;
-}
-
-function getServerClientReadySnapshot() {
-  return false;
-}
-
-function Icon({ name }: { name: IconName }) {
-  return <span aria-hidden className="size-[22px] shrink-0 bg-current" style={{ WebkitMask: `url("${icons[name]}") center/contain no-repeat`, mask: `url("${icons[name]}") center/contain no-repeat` }} />;
-}
-
-function active(path: string, href: string) {
-  return path === href || path.startsWith(`${href}/`);
+function Icon({ name }: { name: NavigationIcon }) {
+  const source = navigationIconPath(name);
+  return <span aria-hidden="true" className="floating-sidebar__icon" style={{ width: 24, height: 24, WebkitMask: `url("${source}") center/contain no-repeat`, mask: `url("${source}") center/contain no-repeat` }} />;
 }
 
 export function SidebarLayoutProvider({ children }: { children: ReactNode }) {
-  const [expanded, setExpandedState] = useState(false);
-
-  useEffect(() => {
-    const savedState = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
-    if (savedState !== "true") return;
-
-    const frame = window.requestAnimationFrame(() => setExpandedState(true));
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  const setExpanded = (nextExpanded: boolean) => {
-    setExpandedState(nextExpanded);
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextExpanded));
-  };
-
+  // Expansion is transient: each fresh app load starts with the Figma rail.
+  const [expanded, setExpanded] = useState(false);
   const value = useMemo(() => ({ expanded, setExpanded }), [expanded]);
   return <SidebarLayoutContext.Provider value={value}>{children}</SidebarLayoutContext.Provider>;
 }
@@ -86,127 +48,151 @@ export default function DesktopSidebar() {
   const pathname = usePathname();
   const t = translations[language].appNavigation;
   const [mobileOpen, setMobileOpen] = useState(false);
-  const clientReady = useSyncExternalStore(
-    subscribeToClientReady,
-    getClientReadySnapshot,
-    getServerClientReadySnapshot,
-  );
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const desktopRef = useRef<HTMLElement>(null);
+  const desktopTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileDialogRef = useRef<HTMLElement>(null);
+  const previousPathRef = useRef(pathname);
+  const desktopId = useId();
+  const mobileId = useId();
+  const tooltipId = useId();
+  const clientReady = useSyncExternalStore(subscribeToClientReady, getClientReadySnapshot, getServerClientReadySnapshot);
+
+  const closeDesktop = useCallback(() => {
+    setExpanded(false);
+    setTooltip(null);
+    requestAnimationFrame(() => desktopTriggerRef.current?.focus({ preventScroll: true }));
+  }, [setExpanded]);
+  const closeMobile = useCallback(() => {
+    setMobileOpen(false);
+    requestAnimationFrame(() => mobileTriggerRef.current?.focus({ preventScroll: true }));
+  }, []);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const outside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !desktopRef.current?.contains(event.target)) closeDesktop();
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeDesktop(); }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [expanded, closeDesktop]);
+
+  useEffect(() => {
+    if (previousPathRef.current === pathname) return;
+    previousPathRef.current = pathname;
+    const frame = requestAnimationFrame(() => {
+      if (expanded) closeDesktop();
+      if (mobileOpen) closeMobile();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname, expanded, mobileOpen, closeDesktop, closeMobile]);
 
   useEffect(() => {
     if (!mobileOpen) return;
     const previousOverflow = document.body.style.overflow;
     const scrollViewport = document.querySelector<HTMLElement>('[data-shell-viewport][data-shell-size="app"]');
     const previousViewportOverflow = scrollViewport?.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
-    };
     document.body.style.overflow = "hidden";
     if (scrollViewport) scrollViewport.style.overflow = "hidden";
-    window.addEventListener("keydown", closeOnEscape);
+    mobileDialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeMobile(); }
+      if (event.key !== "Tab") return;
+      const controls = mobileDialogRef.current?.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)');
+      if (!controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = () => { if (desktopQuery.matches) closeMobile(); };
+    desktopQuery.addEventListener("change", closeOnDesktop);
+    document.addEventListener("keydown", keyboard);
     return () => {
       document.body.style.overflow = previousOverflow;
       if (scrollViewport) scrollViewport.style.overflow = previousViewportOverflow ?? "";
-      window.removeEventListener("keydown", closeOnEscape);
+      desktopQuery.removeEventListener("change", closeOnDesktop);
+      document.removeEventListener("keydown", keyboard);
     };
-  }, [mobileOpen]);
+  }, [mobileOpen, closeMobile]);
 
-  if (!routes.some((route) => active(pathname, route))) return null;
+  if (!isPrivateRoute(pathname) && pathname !== "/help") return null;
 
   const toggle = {
-    en: ["Expand menu", "Collapse menu"],
-    pt: ["Expandir menu", "Recolher menu"],
-    es: ["Expandir menú", "Contraer menú"],
-    de: ["Menü erweitern", "Menü einklappen"],
-    fr: ["Développer le menu", "Réduire le menu"],
-    nl: ["Menu uitklappen", "Menu inklappen"],
+    en: ["Expand menu", "Collapse menu"], pt: ["Expandir menu", "Recolher menu"],
+    es: ["Expandir menú", "Contraer menú"], de: ["Menü erweitern", "Menü einklappen"],
+    fr: ["Développer le menu", "Réduire le menu"], nl: ["Menu uitklappen", "Menu inklappen"],
     it: ["Espandi menu", "Comprimi menu"],
   }[language];
-  const items: { name: IconName; label: string; href: string }[] = [
-    { name: "home", label: t.dashboard, href: "/dashboard" },
-    { name: "transactions", label: t.transactions, href: "/transactions" },
-    { name: "budgets", label: t.budgets, href: "/budgets" },
-    { name: "goals", label: t.goals, href: "/goals" },
-    { name: "investments", label: t.investments, href: "/investments" },
-    { name: "insights", label: t.insights, href: "/insights" },
-  ];
-  const name = account?.profile.display_name || account?.email || "MoneyPilot";
   const logo = theme === "dark" ? "/moneypilot/moneypilot-logo-white.svg" : "/moneypilot/moneypilot-logo.svg";
 
-  const nav = (open: boolean, mobile = false) => (
-    <nav className={mobile ? "flex w-full flex-col gap-[8px]" : "sidebar-navigation"} aria-label={t.navigation}>
-      {items.map((item) => {
-        const selected = active(pathname, item.href);
-        return (
-          <div key={item.name} className="group relative w-full">
-            <Link href={item.href} onClick={() => mobile && setMobileOpen(false)} aria-current={selected ? "page" : undefined} aria-label={item.label} title={!open ? item.label : undefined}
-              className={`flex h-[48px] w-full items-center rounded-[8px] text-[14px] font-medium outline-none transition-all duration-300 ease-in-out focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-60 ${open ? "gap-[12px] px-[12px]" : "justify-center"} ${selected ? "bg-[var(--sidebar-item-active)] text-[var(--sidebar-item-active-foreground)]" : "text-[var(--sidebar-icon)] hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text-primary)]"}`}>
-              <Icon name={item.name} />{open && <span className="truncate whitespace-nowrap">{item.label}</span>}
-            </Link>
-            {!open && !mobile && <span role="tooltip" className="pointer-events-none absolute left-full top-1/2 z-[70] ml-[10px] hidden -translate-y-1/2 whitespace-nowrap rounded-[7px] bg-[var(--background-tooltip)] px-[10px] py-[6px] text-[11px] font-medium text-[var(--text-inverse)] shadow-[0_8px_20px_rgba(0,0,0,0.2)] group-hover:block">{item.label}</span>}
-          </div>
-        );
-      })}
-      <div className="group relative w-full">
-      <button type="button" aria-label={t.help} title={!open ? t.help : undefined}
-        className={`flex h-[48px] w-full items-center rounded-[8px] text-[14px] font-medium text-[var(--sidebar-icon)] outline-none transition-all duration-300 ease-in-out hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-60 ${open ? "gap-[12px] px-[12px]" : "justify-center"}`}>
-        <Icon name="help" />{open && t.help}
-      </button>
-      {!open && !mobile && <span role="tooltip" className="pointer-events-none absolute left-full top-1/2 z-[70] ml-[10px] hidden -translate-y-1/2 whitespace-nowrap rounded-[7px] bg-[var(--background-tooltip)] px-[10px] py-[6px] text-[11px] font-medium text-[var(--text-inverse)] shadow-[0_8px_20px_rgba(0,0,0,0.2)] group-hover:block">{t.help}</span>}
-      </div>
-    </nav>
-  );
-
-  const footer = (open: boolean, mobile = false) => (
-    <div className={mobile ? "flex w-full flex-col gap-[6px]" : "sidebar-footer"}>
-      <Link href="/settings" onClick={() => mobile && setMobileOpen(false)} aria-label={t.settings} title={!open ? t.settings : undefined}
-        className={`flex items-center rounded-[8px] text-[var(--sidebar-icon)] outline-none transition-all duration-300 ease-in-out hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-inset ${mobile ? "h-[40px] text-[12px]" : "h-[48px] text-[14px] font-medium"} ${open ? "gap-[12px] px-[12px]" : "justify-center"}`}>
-        <Icon name="settings" />{open && t.settings}
+  const showTooltip = (event: FocusEvent<HTMLElement> | MouseEvent<HTMLElement>, text: string) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltip({ text, x: rect.right + 18, y: rect.top + rect.height / 2 });
+  };
+  const nav = (open: boolean, mobile = false) => {
+    const close = mobile ? closeMobile : closeDesktop;
+    const tooltipProps = (text: string) => !open ? {
+      "aria-describedby": tooltip?.text === text ? tooltipId : undefined,
+      onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event, text),
+      onFocus: (event: FocusEvent<HTMLElement>) => showTooltip(event, text),
+      onMouseLeave: () => setTooltip(null),
+      onBlur: () => setTooltip(null),
+    } : {};
+    return <nav className="floating-sidebar__nav" aria-label={t.navigation}>
+      {!mobile && <button ref={desktopTriggerRef} type="button" data-sidebar-toggle
+        onClick={() => { if (expanded) closeDesktop(); else { setTooltip(null); setExpanded(true); } }}
+        aria-expanded={expanded} aria-controls={desktopId} aria-label={expanded ? toggle[1] : toggle[0]}
+        {...tooltipProps(toggle[0])} className="floating-sidebar__toggle floating-sidebar__desktop-toggle">
+        <PanelLeft size={24} strokeWidth={1.8} aria-hidden="true" />{expanded && <span>{toggle[1]}</span>}
+      </button>}
+      {navigationItems.map((item) => <Link key={item.href} href={item.href} onClick={close}
+        className="floating-sidebar__item" aria-current={isNavigationActive(pathname, item.href) ? "page" : undefined}
+        aria-label={t[item.label]} {...tooltipProps(t[item.label])}>
+        <Icon name={item.icon} />{open && <span>{t[item.label]}</span>}
+      </Link>)}
+      <Link href="/help" onClick={close} className="floating-sidebar__item" aria-current={isNavigationActive(pathname, "/help") ? "page" : undefined} aria-label={t.help} {...tooltipProps(t.help)}>
+        <Icon name="help" />{open && <span>{t.help}</span>}
       </Link>
-      <div className={`flex items-center rounded-[8px] bg-[var(--sidebar-item-hover)] transition-all duration-300 ease-in-out ${mobile ? "min-h-[50px]" : "h-[48px] shrink-0"} ${open ? mobile ? "gap-[9px] px-[7px]" : "gap-[12px] px-[12px]" : "justify-center"}`}>
-        <AccountAvatar size={mobile ? 36 : 32} />
-        {open && <div className="min-w-0 flex-1"><p className={`truncate font-medium text-[var(--text-primary)] ${mobile ? "text-[11px] font-semibold" : "text-[14px]"}`}>{name}</p><p className="text-[9px] text-[var(--text-tertiary)]">MoneyPilot</p></div>}
-      </div>
-      <form action={signOut}>
-        <button type="submit" aria-label={t.logout} title={!open ? t.logout : undefined}
-          className={`flex w-full items-center rounded-[8px] text-[var(--sidebar-icon)] outline-none transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-60 ${mobile ? "h-[34px] text-[10px]" : "h-[48px] text-[14px] font-medium"} ${open ? "gap-[12px] px-[12px]" : "justify-center"}`}>
-          <Icon name="logout" />{open && t.logout}
+      <form action={signOut} className="floating-sidebar__logout">
+        <button type="submit" className="floating-sidebar__item" aria-label={t.logout} {...tooltipProps(t.logout)}>
+          <Icon name="logout" />{open && <span>{t.logout}</span>}
         </button>
       </form>
-    </div>
-  );
+    </nav>;
+  };
 
   const mobileDrawer = clientReady && mobileOpen ? createPortal(
-      <div data-mobile-sidebar-drawer className="fixed inset-0 z-[90] min-[768px]:hidden">
-        <button type="button" data-mobile-sidebar-backdrop aria-label={toggle[1]} onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-black/45" />
-        <aside className="absolute inset-y-0 left-0 flex w-[264px] flex-col justify-between bg-[var(--background-sidebar)] p-[16px] text-[var(--text-primary)] shadow-[12px_0_30px_rgba(0,0,0,0.22)]">
-          <div><div className="mb-[20px] flex items-center justify-between"><Image src={logo} alt="MoneyPilot" width={164} height={35} /><button type="button" onClick={() => setMobileOpen(false)} aria-label={toggle[1]}>×</button></div>{nav(true, true)}</div>
-          {footer(true, true)}
-        </aside>
-      </div>,
-    document.body,
+    <div data-mobile-sidebar-drawer className="floating-sidebar-mobile">
+      <button type="button" data-mobile-sidebar-backdrop className="floating-sidebar-mobile__backdrop" aria-label={toggle[1]} onClick={closeMobile} />
+      <aside ref={mobileDialogRef} id={mobileId} role="dialog" aria-modal="true" aria-label={t.navigation} className="floating-sidebar-mobile__dialog">
+        <header className="floating-sidebar-mobile__header">
+          <Image src={logo} alt="MoneyPilot" width={164} height={34} loading="eager" style={{ width: 164, height: "auto" }} />
+          <button type="button" onClick={closeMobile} aria-label={toggle[1]} className="floating-sidebar__toggle"><X size={24} aria-hidden="true" /></button>
+        </header>
+        {nav(true, true)}
+        <div className="floating-sidebar-mobile__profile"><AccountAvatar size={36} /><span>{account?.profile.display_name || account?.email || "MoneyPilot"}</span></div>
+      </aside>
+    </div>, document.body,
   ) : null;
 
-  return (
-    <>
-      <header data-mobile-navigation-bar className="sticky top-0 z-[80] flex h-16 w-full items-center border-b border-[var(--border-default)] bg-[var(--background-sidebar)] px-[14px] shadow-[0_4px_14px_rgba(0,0,0,0.06)] min-[768px]:hidden">
-        <button type="button" onClick={() => setMobileOpen(true)} aria-label={toggle[0]}
-          className="grid size-11 place-items-center rounded-[12px] border border-[var(--border-default)] bg-[var(--background-sidebar)] text-[var(--sidebar-icon)] shadow-[var(--sidebar-shadow)] outline-none hover:bg-[var(--sidebar-item-hover)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">☰</button>
-      </header>
-      <aside data-desktop-sidebar data-expanded={expanded} aria-label={t.navigation}
-        className="desktop-sidebar">
-        <div className="sidebar-content">
-          <div className={`sidebar-header ${expanded ? "justify-between" : "flex-col gap-[12px]"}`}>
-            {expanded ? <Image src={logo} alt="MoneyPilot" width={164} height={35} /> : <div className="h-[34px] w-[34px] overflow-hidden"><Image src={logo} alt="MoneyPilot" width={164} height={34} className="max-w-none" /></div>}
-            <button type="button" onClick={() => setExpanded(!expanded)} aria-label={expanded ? toggle[1] : toggle[0]} title={expanded ? toggle[1] : toggle[0]}
-              className={`grid size-[24px] shrink-0 place-items-center rounded-[6px] border-0 bg-transparent text-[var(--sidebar-icon)] shadow-none outline-none transition-all duration-300 ease-in-out hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-60 ${expanded ? "" : "mx-auto"}`}><PanelLeft size={24} strokeWidth={1.8} aria-hidden="true" /></button>
-          </div>
-          <div className="sidebar-navigation-region">
-            {nav(expanded)}
-          </div>
-          {footer(expanded)}
-        </div>
-      </aside>
-      {mobileDrawer}
-    </>
-  );
+  return <>
+    <header data-mobile-navigation-bar className="floating-sidebar-mobile__bar">
+      <button ref={mobileTriggerRef} type="button" onClick={() => setMobileOpen(true)} aria-label={toggle[0]} aria-expanded={mobileOpen} aria-controls={mobileId} className="floating-sidebar__toggle"><Menu size={24} aria-hidden="true" /></button>
+    </header>
+    <aside ref={desktopRef} data-desktop-sidebar data-expanded={expanded} aria-label={t.navigation} className="floating-sidebar">
+      <div id={desktopId} className="floating-sidebar__surface">{nav(expanded)}</div>
+    </aside>
+    {mobileDrawer}
+    {clientReady && tooltip && !expanded && createPortal(<span id={tooltipId} role="tooltip" className="floating-sidebar__tooltip" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.text}</span>, document.body)}
+  </>;
 }

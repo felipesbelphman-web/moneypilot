@@ -1,0 +1,159 @@
+﻿/* Figma 2294:13271. Every existing element override is isolated to Dashboard Day. */
+:root[data-theme="light"] [data-shell-viewport][data-dashboard-fit="true"],
+:root[data-theme="light"] [data-shell-viewport][data-help-theme="true"],
+:root[data-theme="light"] [data-shell-viewport][data-settings-theme="true"] {
+  --day-app: #f3f3f3;
+  --day-sidebar: #f9f9f9;
+  --day-panel: rgb(255 255 255 / .94);
+  --day-card: rgb(255 255 255 / .82);
+  --day-secondary: #f0f0f0;
+  --day-border: #dadada;
+  --day-track: #ededed;
+  --day-text: #1a1a1a;
+  --day-muted: #616161;
+  --day-tertiary: #767676;
+  --day-blue: #348dfc;
+  --day-link: #1f5fbf;
+  --day-teal: #007a63;
+  --day-positive: #22c55e;
+  --day-cyan: #00e7b9;
+  --day-on-blue: #f5f7fa;
+  --day-blue-soft: rgb(52 141 252 / .10);
+  --day-blue-border: rgb(52 141 252 / .30);
+  --day-green-soft: rgb(0 231 185 / .10);
+  --floating-nav-surface: var(--day-sidebar);
+  --floating-nav-border: var(--day-border);
+  --floating-nav-active: var(--day-blue);
+  background: var(--day-app);
+
+  [data-dashboard-page] {
+    --background-app: var(--day-app);
+    --background-elevated: var(--day-panel);
+    --background-card: var(--day-card);
+    --background-secondary: var(--day-secondary);
+    --background-control: var(--day-secondary);
+    --text-primary: var(--day-text);
+    --text-secondary: var(--day-muted);
+    --text-tertiary: var(--day-tertiary);
+    --border-default: var(--day-border);
+    --brand-primary: var(--day-blue);
+    --brand-secondary: var(--day-link);
+    --goal-card-title: var(--day-text);
+    --surface-blue-subtle: var(--day-blue-soft);
+    --surface-blue-medium: var(--day-sidebar);
+    --surface-green-strong: var(--day-green-soft);
+    --dashboard-brand-primary: var(--day-blue);
+    --dashboard-brand-primary-hover: var(--day-blue);
+    --dashboard-brand-accent: var(--day-blue);
+    --dashboard-brand-soft: var(--day-blue-soft);
+    --dashboard-brand-soft-strong: var(--day-track);
+    --dashboard-brand-border: var(--day-blue-border);
+    --dashboard-chart-primary: var(--day-blue);
+    --dashboard-chart-secondary: var(--day-cyan);
+    --dashboard-focus: var(--day-blue);
+    --financial-summary-surface: var(--day-sidebar);
+    --financial-flow-surface: var(--day-card);
+    --financial-flow-border: var(--day-border);
+    --financial-flow-summary-border: var(--day-border);
+    --financial-flow-divider: var(--day-track);
+    --financial-flow-tab-surface: var(--day-sidebar);
+    --financial-flow-tab-border: var(--day-border);
+    --financial-flow-control: var(--day-secondary);
+    --financial-flow-control-border: var(--day-border);
+    --financial-flow-muted: var(--day-muted);
+    --financial-flow-comparison: var(--day-muted);
+    --shadow-card: none;
+    --financial-flow-shadow: none;
+    --dashboard-panel-background: var(--day-panel);
+    --dashboard-panel-border: var(--day-border);
+    --dashboard-panel-shadow: 0 14px 56px rgb(0 0 0 / .24);
+    color: var(--day-text);
+  }
+  .dashboard-day-logo { display: flex; align-items: center; gap: 18.375px; flex-shrink: 0; }
+  .dashboard-day-logo img { width: 36.75px; height: 36.75px; }
+  .dashboard-day-logo span { font-family: var(--font-poppins), sans-serif; font-size: 21.44px; font-weight: 500; letter-spacing: .4288px; line-height: 26.031px; }
+  .dashboard-dark-avatar { display: block; flex-shrink: 0; }
+  .dashboard-theme-row { justify-content: space-between; }
+  .dashboard-theme-row > [role="group"] { background: var(--day-secondary); border-color: var(--day-border); }
+  .dashboard-period-controls {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 245px; padding: 3.861px 12px; border: 1px solid var(--day-border); border-radius: 25px;
+    background: var(--day-secondary); color: var(--day-text);
+  }
+  .dashboard-period-controls button { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 38.6px; font-size: 12.55px; cursor: pointer; }
+  .dashboard-period-controls button:focus-visible { outline: 2px solid var(--day-blue); outline-offset: 2px; }
+  .dashboard-period-controls__selected { width: 83px; border-radius: 24px; background: var(--day-blue); color: var(--day-on-blue); font-weight: 600; }
+  .dashboard-period-controls img { filter: brightness(0); }
+  .dashboard-header [role="dialog"] { background: var(--day-sidebar); border-color: var(--day-border); color: var(--day-text); }
+  .dashboard-header [role="dialog"] button { color: var(--day-text); }
+  .dashboard-header [role="dialog"] button[aria-pressed="true"] { background: var(--day-blue); color: var(--day-on-blue); }
+  .dashboard-header [role="dialog"] button:hover { background: var(--day-blue-soft); }
+  .dashboard-header [role="dialog"] button[aria-pressed="true"]:hover { background: var(--day-blue); }
+  [data-dashboard-page] [class~="text-[#F5F7FA]"] { color: var(--day-text); }
+  [data-dashboard-page] :is([class~="text-[#9CA6B2]"], [class~="text-[#94A5A5]"], [class~="text-[#C7CCD6]"], [class~="text-[#8E96A5]"]) { color: var(--day-muted); }
+  [data-dashboard-page] [class~="border-[#1E427A]"] { border-color: var(--day-blue-border); }
+  .dashboard-flow-row > article:last-child > div:last-child:not(:nth-child(2)) { background: var(--day-blue-soft); border-color: transparent; }
+  .dashboard-secondary-row > article:first-child > a:last-child { border-color: var(--day-border); }
+  .dashboard-secondary-row a { color: var(--day-link); }
+  .dashboard-secondary-row > article:nth-child(2) > a:last-child { color: var(--day-on-blue); }
+  [data-day-monthly-status] { background: transparent; }
+  .dashboard-secondary-row [data-day-monthly-status] > div > p { font-size: 13.2px; }
+  .dashboard-secondary-row a > span:last-child {
+    display: inline-block; width: 18px; height: 18px; flex-shrink: 0; font-size: 0;
+    background: currentColor; mask: url('/moneypilot/dashboard/day/arrow-right.svg') center / contain no-repeat;
+  }
+  img[src="/moneypilot/dashboard-spending-title-icon.svg"] { content: url('/moneypilot/dashboard/day/spending.svg'); }
+  img[src="/moneypilot/dashboard-spending-insight-icon.svg"] { content: url('/moneypilot/dashboard/day/insight.svg'); }
+  [data-financial-flow-tabs] > button[style] { color: var(--day-text); }
+  .dashboard-kpis > article:first-of-type p:not(.numeric-value) { white-space: normal; }
+
+  @media (min-width: 768px) {
+    [data-app-shell] > [data-app-scroll] {
+      padding: 16px 32px; min-height: 810px;
+      border: 1px solid var(--day-border); border-radius: 38px;
+      background: var(--day-panel); backdrop-filter: blur(12px);
+      box-shadow: 0 14px 56px rgb(0 0 0 / .24);
+    }
+    [data-dashboard-page].dashboard-page-shell { width: 100%; height: auto; padding: 0; background: transparent; }
+    [data-dashboard-page] .dashboard-shell { width: 100%; height: auto; }
+    [data-dashboard-page] .dashboard-main { display: flex; flex-direction: column; gap: 12px; width: 100%; height: auto; min-height: 776px; padding: 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+    .dashboard-theme-row { height: 37px; flex-shrink: 0; margin: 0; }
+    .dashboard-header { height: 58px; min-height: 58px; margin: 0; }
+    .dashboard-header__title h1 { font-size: 23.168px; }
+    .dashboard-header__title span { color: var(--day-muted); }
+    .dashboard-header__controls { gap: 24px; flex-wrap: nowrap; }
+    .dashboard-kpis { grid-template-columns: minmax(0, 297fr) repeat(3, minmax(0, 255fr)); height: 195px; min-height: 195px; margin: 0; }
+    .dashboard-flow-row { height: 209px; min-height: 209px; margin: 0; }
+    .dashboard-secondary-row { height: auto; min-height: 212px; margin: 0; align-items: stretch; }
+    :is(.dashboard-kpis, .dashboard-flow-row, .dashboard-secondary-row) > article { height: 100%; min-height: 0; padding: 12px; gap: 10px; border: 1px solid var(--day-border); border-radius: 19.307px; background: var(--day-card); box-shadow: none; }
+    [data-dashboard-page] h2 { font-size: 14px; }
+    .dashboard-kpis p:not(.numeric-value) { font-size: 11.5px; line-height: 16px; }
+    .dashboard-kpis > article:first-of-type { border-radius: 18.264px; }
+    .dashboard-kpis > article:nth-of-type(2) svg path { stroke: var(--day-cyan); }
+    .dashboard-secondary-row p:not(.numeric-value) { font-size: 10.4px; line-height: 14px; }
+    .dashboard-secondary-row > article > div:first-child { min-height: 27px; }
+    .dashboard-secondary-row > article > div:nth-child(2) { flex: 1 1 auto; }
+    .dashboard-secondary-row > article > a:last-child { height: 28px; margin-top: auto; }
+    .dashboard-flow-row > article > div:first-child { height: 28px; min-height: 28px; }
+    .dashboard-flow-row > article:first-child > div:first-child h2 { font-size: 20px; font-weight: 700; }
+    .dashboard-flow-row > article:first-child > div:nth-child(2):not(.absolute) { grid-template-columns: 150px minmax(0, 1fr) 29px; gap: 12px; }
+    [data-financial-flow-tabs] { width: 270px; height: 26px; padding: 2px; }
+    [data-financial-flow-tabs] > button { height: 20px; font-size: 11px; }
+    .dashboard-flow-row > article:last-child { position: relative; }
+    .dashboard-flow-row > article:last-child > div:nth-child(2) { align-items: center; padding-bottom: 34px; gap: 12px; }
+    .dashboard-flow-row > article:last-child > div:nth-child(2) > div:first-child { width: 111px; height: 111px; }
+    .dashboard-flow-row > article:last-child > div:last-child:not(:nth-child(2)) { position: absolute; left: 135px; right: 12px; bottom: 12px; width: auto; min-height: 34px; padding: 4px 7px; }
+  }
+  @media (max-width: 767px) {
+    [data-app-shell] { background: var(--day-app); }
+    .dashboard-theme-row { height: auto; gap: 8px; }
+    .dashboard-day-logo { gap: 8px; }
+    .dashboard-day-logo span { font-size: 17px; }
+    .dashboard-day-logo img { width: 30px; height: 30px; }
+    .dashboard-header__controls { gap: 10px; flex-wrap: wrap; }
+    .dashboard-period-controls { width: 232px; }
+    .dashboard-kpis, .dashboard-flow-row, .dashboard-secondary-row { gap: 12px; }
+    .dashboard-secondary-row { grid-auto-rows: minmax(212px, auto); }
+    [data-dashboard-page] h2 { font-size: 14px; }
+  }
+}

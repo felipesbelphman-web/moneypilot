@@ -2,7 +2,7 @@
 
 import { useCurrency } from "@/components/CurrencyProvider";
 
-import { useEffect } from "react";
+import { BudgetDialog } from "@/components/budgets/BudgetDialog";
 import { IconEdit, IconGauge, IconX } from "@tabler/icons-react";
 
 import type { BudgetAdjustment } from "@/components/budgets/budget-model";
@@ -32,15 +32,7 @@ export function BudgetProjectionModal({ view, month, projection, adjustment, onC
   const copy = getCopy(language);
   const adjustmentCopy = getAdjustmentCopy(language);
 
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-
-  if (!projection.available) return null;
+if (!projection.available) return null;
   const canAdjust = canApplyBudgetAdjustment(projection);
   const displayedTarget = adjustment?.targetRemainingSpend ?? projection.remainingSpendTarget;
   const displayedAdjustment = adjustment?.adjustmentNeeded ?? projection.adjustmentNeeded;
@@ -58,9 +50,9 @@ export function BudgetProjectionModal({ view, month, projection, adjustment, onC
   }
 
   return (
-    <div className="absolute inset-0 z-[70] flex items-center justify-center bg-[#02060A]/68 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <BudgetDialog wide onClose={onClose} label={view === "projection" ? copy.projectionTitle : copy.reviewTitle}>
       {view === "projection" ? (
-        <section role="dialog" aria-modal="true" aria-labelledby="budget-projection-title" className="relative h-[648px] w-[720px] overflow-hidden rounded-[24px] border border-[var(--border-default)] bg-[var(--background-elevated)] text-[var(--text-primary)] shadow-[0_24px_24px_rgba(0,0,0,0.5)]">
+        <section aria-labelledby="budget-projection-title" className="relative h-[648px] w-[720px] overflow-hidden rounded-[24px] border border-[var(--border-default)] bg-[var(--background-elevated)] text-[var(--text-primary)] shadow-[0_24px_24px_rgba(0,0,0,0.5)]">
           <ModalHeader icon={<IconGauge size={20} />} titleId="budget-projection-title" title={copy.projectionTitle} description={copy.projectionDescription} month={monthLabel} onClose={onClose} />
           <div className="absolute left-[27px] top-[95px] grid w-[666px] grid-cols-3 gap-[16px]">
             <MetricCard label={copy.planned} value={money(projection.plannedTotal)} />
@@ -87,7 +79,7 @@ export function BudgetProjectionModal({ view, month, projection, adjustment, onC
           <div className="absolute bottom-[27px] right-[27px] flex gap-[10px]"><SecondaryButton onClick={onClose}>{copy.close}</SecondaryButton><PrimaryButton onClick={onReview} disabled={!canAdjust}>{projection.adjustmentNeeded > 0 ? copy.review : copy.onTrack}</PrimaryButton></div>
         </section>
       ) : (
-        <section role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title" className="relative h-[650px] w-[680px] overflow-hidden rounded-[24px] border border-[var(--border-default)] bg-[var(--background-elevated)] text-[var(--text-primary)] shadow-[0_24px_24px_rgba(0,0,0,0.5)]">
+        <section aria-labelledby="budget-adjustment-title" className="relative h-[650px] w-[680px] overflow-hidden rounded-[24px] border border-[var(--border-default)] bg-[var(--background-elevated)] text-[var(--text-primary)] shadow-[0_24px_24px_rgba(0,0,0,0.5)]">
           <ModalHeader icon={<IconEdit size={20} />} titleId="budget-adjustment-title" title={copy.reviewTitle} description={adjustmentCopy.reviewDescription} month={monthLabel} onClose={onClose} />
           <div className="absolute left-[27px] top-[95px] h-[92px] w-[626px] rounded-[14px] border border-[var(--border-default)] bg-[var(--background-secondary)] p-[13px]"><p className="text-[10px] font-semibold">{copy.currentProjection}</p><strong className="mt-[5px] block text-[19px]">{money(projection.projectedTotal)}</strong><p className="mt-[5px] text-[9px] text-[var(--text-tertiary)]">{adjustmentCopy.projectedRemainingSpend}: {money(projection.currentRemainingProjectedSpend)}</p></div>
           <p className="absolute left-[27px] top-[202px] text-[12px] font-semibold">{adjustmentCopy.suggestedTarget}</p>
@@ -101,7 +93,7 @@ export function BudgetProjectionModal({ view, month, projection, adjustment, onC
           <div className="absolute bottom-[17px] right-[27px] flex gap-[10px]"><SecondaryButton onClick={onBack}>{copy.back}</SecondaryButton><PrimaryButton onClick={applyAdjustment} disabled={!canAdjust}>{adjustmentCopy.savePlan}</PrimaryButton></div>
         </section>
       )}
-    </div>
+    </BudgetDialog>
   );
 }
 

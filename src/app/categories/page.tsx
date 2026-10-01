@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { DesktopInternalPagePanel, DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
 import { useFinanceData } from "@/components/FinanceDataProvider";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -8,6 +8,8 @@ import { buildCategoryCreateInput, buildCategoryUpdateInput, getCategoryBenefits
 import { localizeCopy } from "@/i18n/localize-copy";
 import type { Category } from "@/lib/domain/category";
 import { FinanceError } from "@/lib/domain/finance-error";
+
+import { areFinanceResourcesReady } from "@/lib/persistence/finance-resource-status";
 
 const iconRoot = "/moneypilot/icons/categories";
 function Glyph({ name, size = 16, color = "#9CA6B2" }: { name: string; size?: number; color?: string }) {
@@ -24,13 +26,18 @@ const categoryColor = (token: string) => colorValues[token] ?? "#9CA6B2";
 export default function CategoriesPage() {
   const { language } = useLanguage();
   const finance = useFinanceData();
+  const categoriesReady = areFinanceResourcesReady(finance.resourceStatuses, ["categories"]);
+  const isLoading = finance.resourceStatuses.categories.status === "loading";
+  const hasLoadError = !categoriesReady && !isLoading;
+  const latestFinance = useRef(finance);
+  useLayoutEffect(() => { latestFinance.current = finance; }, [finance]);
   const tr = (value: string) => localizeCopy(language, value);
   const copy = getCategoryPageCopy(language);
   const futureCopy = getCategoryFutureCopy(language);
   const iconOptions = getCategoryIconOptions(language);
   const colorOptions = getCategoryColorOptions(language);
   const metrics = [
-    { label: futureCopy.activeMetricLabel, value: String(finance.activeCategories.length), detail: futureCopy.activeMetricDetail, icon: "tag", color: "#3B82F6" },
+    { label: futureCopy.activeMetricLabel, value: categoriesReady ? String(finance.activeCategories.length) : "\u2014", detail: futureCopy.activeMetricDetail, icon: "tag", color: "#3B82F6" },
     { label: futureCopy.rulesMetricLabel, value: futureCopy.comingSoon, detail: futureCopy.unavailableDetail, icon: "rules", color: "#F59E0B" },
     { label: futureCopy.merchantsMetricLabel, value: futureCopy.comingSoon, detail: futureCopy.unavailableDetail, icon: "store", color: "#22C55E" },
     { label: futureCopy.classificationMetricLabel, value: futureCopy.comingSoon, detail: futureCopy.unavailableDetail, icon: "automation", color: "#8B5CF6" },
@@ -41,7 +48,7 @@ export default function CategoriesPage() {
   const [feedback, setFeedback] = useState<{ tone: "error" | "success"; message: string } | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
-  const visible = useMemo(() => showArchived ? finance.categories.filter((item) => item.archivedAt) : finance.activeCategories, [finance.activeCategories, finance.categories, showArchived]);
+  const visible = useMemo(() => categoriesReady ? (showArchived ? finance.categories.filter((item) => item.archivedAt) : finance.activeCategories) : null, [categoriesReady, finance.activeCategories, finance.categories, showArchived]);
   const pending = finance.mutationState.status === "saving" && ["createCategory", "updateCategory", "archiveCategory", "restoreCategory"].includes(finance.mutationState.operation ?? "");
 
   useEffect(() => {
@@ -54,8 +61,13 @@ export default function CategoriesPage() {
     return () => window.removeEventListener("keydown", close);
   }, [editor?.mode, pending]);
 
-  function openCreate() { setFeedback(null); setEditor({ mode: "create", draft: emptyDraft }); }
-  function openEdit(category: Category) { setFeedback(null); setEditor({ mode: "edit", category, draft: { name: category.name, type: category.type, iconKey: category.iconKey, colorToken: category.colorToken } }); }
+  function requireCategories() {
+    if (areFinanceResourcesReady(latestFinance.current.resourceStatuses, ["categories"])) return true;
+    setFeedback({ tone: "error", message: copy.unavailableError });
+    return false;
+  }
+  function openCreate() { if (!requireCategories()) return; setFeedback(null); setEditor({ mode: "create", draft: emptyDraft }); }
+  function openEdit(category: Category) { if (!requireCategories()) return; setFeedback(null); setEditor({ mode: "edit", category, draft: { name: category.name, type: category.type, iconKey: category.iconKey, colorToken: category.colorToken } }); }
   function setDraft(patch: Partial<CategoryDraft>) { setFeedback(null); setEditor((current) => current && current.mode !== "confirm" ? { ...current, draft: { ...current.draft, ...patch } } : current); }
   function safeError(error: unknown) {
     const code = error instanceof FinanceError ? error.code : null;
@@ -69,6 +81,7 @@ export default function CategoriesPage() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!editor || editor.mode === "confirm" || submittingRef.current) return;
+    if (!requireCategories()) return;
     submittingRef.current = true; setFeedback(null);
     try {
       if (editor.mode === "create") { await finance.createCategory(buildCategoryCreateInput(editor.draft)); setFeedback({ tone: "success", message: copy.successCreated }); }
@@ -79,6 +92,7 @@ export default function CategoriesPage() {
   }
   async function confirmArchiveOrRestore() {
     if (!editor || editor.mode !== "confirm" || submittingRef.current) return;
+    if (!requireCategories()) return;
     submittingRef.current = true; setFeedback(null);
     try {
       if (editor.category.archivedAt) { await finance.restoreCategory(editor.category.id); setFeedback({ tone: "success", message: copy.successRestored }); }
@@ -88,16 +102,16 @@ export default function CategoriesPage() {
     finally { submittingRef.current = false; }
   }
 
-  return <main className="min-h-screen max-w-full overflow-x-hidden bg-[#080B0F] font-[Inter] text-[#F5F7FA]"><MobileCategories copy={copy} visible={visible} activeCount={finance.activeCategories.length} allCount={finance.categories.length} isHydrating={finance.isHydrating} hasLoadError={Boolean(finance.hydrationError)} showArchived={showArchived} setShowArchived={setShowArchived} editor={editor} pending={pending} feedback={feedback} iconOptions={iconOptions} colorOptions={colorOptions} openCreate={openCreate} openEdit={openEdit} setDraft={setDraft} setEditor={setEditor} submit={submit} confirm={confirmArchiveOrRestore} /><div className="hidden min-[768px]:block"><DesktopScaleCanvas><div className="relative h-[1024px] w-[1536px] overflow-hidden"><DesktopInternalPagePanel><div className="flex h-[767.67px] w-[1098px] flex-col gap-[12px]">
+  return <main className="min-h-screen max-w-full overflow-x-hidden bg-[#080B0F] font-[Inter] text-[#F5F7FA]"><MobileCategories copy={copy} visible={visible} activeCount={categoriesReady ? finance.activeCategories.length : null} allCount={categoriesReady ? finance.categories.length : null} isHydrating={isLoading} hasLoadError={hasLoadError} showArchived={showArchived} setShowArchived={setShowArchived} editor={categoriesReady ? editor : null} pending={pending} feedback={feedback} iconOptions={iconOptions} colorOptions={colorOptions} openCreate={openCreate} openEdit={openEdit} setDraft={setDraft} setEditor={setEditor} submit={submit} confirm={confirmArchiveOrRestore} /><div className="hidden min-[768px]:block"><DesktopScaleCanvas><div className="relative h-[1024px] w-[1536px] overflow-hidden"><DesktopInternalPagePanel><div className="flex h-[767.67px] w-[1098px] flex-col gap-[12px]">
     <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[700px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{tr("Categorias")}</h1><p className="text-[13.2px] text-[#9CA6B2]">{tr("Gerencie categorias, cores e regras automáticas para seus gastos.")}</p></div><button type="button" onClick={openCreate} className="h-[38px] w-[146px] rounded-[19px] bg-[#3B82F6] text-[10px] font-semibold">{tr("+ Nova categoria")}</button></header>
     <section aria-label={tr("Resumo das categorias")} className="flex h-[100px] shrink-0 gap-[12px]">{metrics.map((metric) => <article key={metric.label} className={`${cardClass} relative h-[100px] w-[265.5px] shrink-0`}><span className="absolute left-[11px] top-[11px] flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border" style={{ borderColor: metric.color, backgroundColor: `${metric.color}24` }}><Glyph name={metric.icon} size={16} color={metric.color} /></span><h2 className="absolute left-[51px] top-[16px] text-[11px] font-semibold">{metric.label}</h2><strong className="absolute left-[11px] top-[45px] text-[23px] font-semibold">{metric.value}</strong><p className="absolute left-[11px] top-[77px] text-[9.2px] text-[#9CA6B2]">{metric.detail}</p></article>)}</section>
     <section className="flex h-[260px] shrink-0 gap-[12px]"><article className={`${cardClass} relative h-[260px] w-[677px] shrink-0`}><h2 className="absolute left-[11px] top-[9px] text-[15px] font-semibold">{tr("Lista de categorias")}</h2><div className="absolute right-[10px] top-[7px] flex gap-[5px]"><button type="button" aria-pressed={!showArchived} onClick={() => setShowArchived(false)} className={`h-[24px] rounded-[12px] px-[9px] text-[8px] font-semibold ${!showArchived ? "bg-[#3B82F6]" : "border border-[#28313B] text-[#9CA6B2]"}`}>{copy.showActive}</button><button type="button" aria-pressed={showArchived} onClick={() => setShowArchived(true)} className={`h-[24px] rounded-[12px] px-[9px] text-[8px] font-semibold ${showArchived ? "bg-[#3B82F6]" : "border border-[#28313B] text-[#9CA6B2]"}`}>{copy.showArchived}</button></div>
-      {finance.hydrationError && <p role="alert" className="absolute left-[11px] top-[35px] w-[653px] truncate text-[8px] text-[#F59E0B]">{copy.loadError}</p>}
-      <div className={`absolute left-[11px] grid h-[22px] w-[653px] grid-cols-[228px_46px_321px_58px] items-center rounded-[7px] bg-[rgba(25,33,44,0.78)] px-[8px] text-[8.2px] font-semibold text-[#7F8996] ${finance.hydrationError ? "top-[50px]" : "top-[39px]"}`}><span>{tr("Categoria")}</span><span>{tr("Cor")}</span><span>{copy.type}</span><span>{futureCopy.actions}</span></div>
-      <div className={`absolute left-[11px] max-h-[184px] w-[653px] overflow-y-auto ${finance.hydrationError ? "top-[72px] max-h-[173px]" : "top-[61px]"}`}>{finance.isHydrating && finance.categories.length === 0 ? <p role="status" className="py-[36px] text-center text-[9px] text-[#9CA6B2]">{copy.loading}</p> : visible.length === 0 ? <div className="py-[29px] text-center"><p className="text-[9px] text-[#9CA6B2]">{showArchived ? copy.emptyArchived : copy.emptyActive}</p>{!showArchived && <button type="button" onClick={openCreate} className="mt-[10px] h-[25px] rounded-[13px] bg-[#3B82F6] px-[14px] text-[8px] font-semibold">{tr("+ Nova categoria")}</button>}</div> : visible.map((category) => { const color = categoryColor(category.colorToken); return <div key={category.id} className="grid h-[23px] grid-cols-[228px_46px_321px_58px] items-center border-b border-[#28313B]/70 px-[6px] text-[8px]"><span className="flex items-center gap-[7px] text-[8.8px] font-semibold"><i className="flex h-[18px] w-[18px] items-center justify-center rounded-[6px]" style={{ backgroundColor: `${color}24` }}><Glyph name={category.iconKey} size={12} color={color} /></i><span className="truncate">{category.name}</span></span><i className="h-[7px] w-[7px] rounded-full" style={{ backgroundColor: color }} /><span className="text-[#9CA6B2]">{category.type === "income" ? copy.income : copy.expense} · {category.archivedAt ? copy.archived : copy.active}</span><span className="flex items-center justify-end gap-[8px]"><button type="button" onClick={() => openEdit(category)} aria-label={`${copy.edit} ${category.name}`}><Glyph name="edit" size={11} color="#64707D" /></button><button type="button" onClick={() => { setFeedback(null); setEditor({ mode: "confirm", category }); }} aria-label={`${category.archivedAt ? copy.restore : copy.archive} ${category.name}`}><Glyph name={category.archivedAt ? "arrow-right" : "more"} size={12} color="#64707D" /></button></span></div>; })}</div>
+      {hasLoadError && <p role="alert" className="absolute left-[11px] top-[35px] w-[653px] truncate text-[8px] text-[#F59E0B]">{copy.loadError}</p>}
+      <div className={`absolute left-[11px] grid h-[22px] w-[653px] grid-cols-[228px_46px_321px_58px] items-center rounded-[7px] bg-[rgba(25,33,44,0.78)] px-[8px] text-[8.2px] font-semibold text-[#7F8996] ${hasLoadError ? "top-[50px]" : "top-[39px]"}`}><span>{tr("Categoria")}</span><span>{tr("Cor")}</span><span>{copy.type}</span><span>{futureCopy.actions}</span></div>
+      <div className={`absolute left-[11px] max-h-[184px] w-[653px] overflow-y-auto ${hasLoadError ? "top-[72px] max-h-[173px]" : "top-[61px]"}`}>{isLoading ? <p role="status" className="py-[36px] text-center text-[9px] text-[#9CA6B2]">{copy.loading}</p> : visible === null ? null : visible.length === 0 ? <div className="py-[29px] text-center"><p className="text-[9px] text-[#9CA6B2]">{showArchived ? copy.emptyArchived : copy.emptyActive}</p>{!showArchived && <button type="button" onClick={openCreate} className="mt-[10px] h-[25px] rounded-[13px] bg-[#3B82F6] px-[14px] text-[8px] font-semibold">{tr("+ Nova categoria")}</button>}</div> : visible.map((category) => { const color = categoryColor(category.colorToken); return <div key={category.id} className="grid h-[23px] grid-cols-[228px_46px_321px_58px] items-center border-b border-[#28313B]/70 px-[6px] text-[8px]"><span className="flex items-center gap-[7px] text-[8.8px] font-semibold"><i className="flex h-[18px] w-[18px] items-center justify-center rounded-[6px]" style={{ backgroundColor: `${color}24` }}><Glyph name={category.iconKey} size={12} color={color} /></i><span className="truncate">{category.name}</span></span><i className="h-[7px] w-[7px] rounded-full" style={{ backgroundColor: color }} /><span className="text-[#9CA6B2]">{category.type === "income" ? copy.income : copy.expense} · {category.archivedAt ? copy.archived : copy.active}</span><span className="flex items-center justify-end gap-[8px]"><button type="button" onClick={() => openEdit(category)} aria-label={`${copy.edit} ${category.name}`}><Glyph name="edit" size={11} color="#64707D" /></button><button type="button" onClick={() => { setFeedback(null); setEditor({ mode: "confirm", category }); }} aria-label={`${category.archivedAt ? copy.restore : copy.archive} ${category.name}`}><Glyph name={category.archivedAt ? "arrow-right" : "more"} size={12} color="#64707D" /></button></span></div>; })}</div>
     </article><RulesCard copy={futureCopy} /></section>
     <section className={`${cardClass} flex h-[78px] shrink-0 items-center px-[10px]`}><h2 className="w-[170px] shrink-0 text-[13px] font-semibold">{tr("Como isso ajuda")}</h2>{benefits.map((benefit) => <div key={benefit.title} className="flex h-[48px] w-[227px] items-center gap-[8px] border-l border-[#28313B] px-[10px]"><i className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[7px] bg-[#3B82F6]/12"><Glyph name={benefit.icon} size={13} color="#60A5FA" /></i><div><strong className="block text-[8.4px]">{benefit.title}</strong><span className="mt-[3px] block text-[7.8px] text-[#9CA6B2]">{benefit.copy}</span></div></div>)}</section>
-    {(editor || feedback) && <EditorPanel editor={editor} pending={pending} feedback={feedback} copy={copy} nameRef={nameRef} iconOptions={iconOptions} colorOptions={colorOptions} setDraft={setDraft} setEditor={setEditor} submit={submit} confirm={confirmArchiveOrRestore} openCreate={openCreate} />}
+    {categoriesReady && (editor || feedback) && <EditorPanel editor={editor} pending={pending || !categoriesReady} feedback={feedback} copy={copy} nameRef={nameRef} iconOptions={iconOptions} colorOptions={colorOptions} setDraft={setDraft} setEditor={setEditor} submit={submit} confirm={confirmArchiveOrRestore} openCreate={openCreate} />}
   </div></DesktopInternalPagePanel></div></DesktopScaleCanvas></div></main>;
 }
 
@@ -119,7 +133,7 @@ function CategorySelect({ kind, label, left, value, options, onChange }: { kind:
 }
 
 type MobileCategoriesProps = {
-  copy: Copy; visible: Category[]; activeCount: number; allCount: number; isHydrating: boolean; hasLoadError: boolean;
+  copy: Copy; visible: Category[] | null; activeCount: number | null; allCount: number | null; isHydrating: boolean; hasLoadError: boolean;
   showArchived: boolean; setShowArchived: (value: boolean) => void; editor: EditorState; pending: boolean;
   feedback: { tone: "error" | "success"; message: string } | null; iconOptions: CategoryFriendlyOption[]; colorOptions: CategoryFriendlyOption[];
   openCreate: () => void; openEdit: (category: Category) => void; setDraft: (patch: Partial<CategoryDraft>) => void;
@@ -132,15 +146,15 @@ function MobileCategories(props: MobileCategoriesProps) {
   const tr = (value: string) => localizeCopy(language, value);
   return <div data-categories-mobile className="min-h-screen w-full max-w-full overflow-x-hidden bg-[var(--background-elevated)] px-[16px] pb-[32px] pt-[16px] text-[var(--text-primary)] min-[768px]:hidden">
     <header className="flex flex-wrap items-start justify-between gap-[12px]"><div className="min-w-0 flex-1"><h1 className="text-[24px] font-semibold">{tr("Categorias")}</h1><p className="mt-[4px] text-[13px] text-[var(--text-secondary)]">{tr("Gerencie categorias, cores e regras automáticas para seus gastos.")}</p></div><button type="button" onClick={openCreate} className="h-[38px] shrink-0 rounded-[19px] bg-[#3B82F6] px-[16px] text-[11px] font-semibold text-white">{copy.createTitle}</button></header>
-    <section className="mt-[18px] grid grid-cols-2 gap-[10px]" aria-label={tr("Resumo das categorias")}><MobileMetric label={copy.showActive} value={activeCount} /><MobileMetric label={copy.showArchived} value={Math.max(0, allCount - activeCount)} /></section>
+    <section className="mt-[18px] grid grid-cols-2 gap-[10px]" aria-label={tr("Resumo das categorias")}><MobileMetric label={copy.showActive} value={activeCount ?? "\u2014"} /><MobileMetric label={copy.showArchived} value={allCount === null || activeCount === null ? "\u2014" : Math.max(0, allCount - activeCount)} /></section>
     <section className="mt-[12px] rounded-[18px] border border-[var(--border-default)] bg-[var(--background-subtle)] p-[12px]"><div className="flex flex-wrap items-center justify-between gap-[10px]"><h2 className="text-[16px] font-semibold">{tr("Lista de categorias")}</h2><div className="flex gap-[6px]"><MobileFilter active={!showArchived} onClick={() => setShowArchived(false)}>{copy.showActive}</MobileFilter><MobileFilter active={showArchived} onClick={() => setShowArchived(true)}>{copy.showArchived}</MobileFilter></div></div>
-      {hasLoadError && <p role="alert" className="mt-[10px] text-[11px] text-[#F59E0B]">{copy.loadError}</p>}{isHydrating && allCount === 0 ? <p role="status" className="py-[36px] text-center text-[12px] text-[var(--text-secondary)]">{copy.loading}</p> : visible.length === 0 ? <div className="py-[32px] text-center"><p className="text-[12px] text-[var(--text-secondary)]">{showArchived ? copy.emptyArchived : copy.emptyActive}</p>{!showArchived && <button type="button" onClick={openCreate} className="mt-[12px] rounded-[16px] bg-[#3B82F6] px-[15px] py-[8px] text-[10px] font-semibold text-white">{copy.createTitle}</button>}</div> : <div className="mt-[10px] grid gap-[8px]">{visible.map((category) => <MobileCategoryRow key={category.id} category={category} copy={copy} openEdit={openEdit} setEditor={setEditor} />)}</div>}</section>
+      {hasLoadError && <p role="alert" className="mt-[10px] text-[11px] text-[#F59E0B]">{copy.loadError}</p>}{isHydrating ? <p role="status" className="py-[36px] text-center text-[12px] text-[var(--text-secondary)]">{copy.loading}</p> : visible === null ? null : visible.length === 0 ? <div className="py-[32px] text-center"><p className="text-[12px] text-[var(--text-secondary)]">{showArchived ? copy.emptyArchived : copy.emptyActive}</p>{!showArchived && <button type="button" onClick={openCreate} className="mt-[12px] rounded-[16px] bg-[#3B82F6] px-[15px] py-[8px] text-[10px] font-semibold text-white">{copy.createTitle}</button>}</div> : <div className="mt-[10px] grid gap-[8px]">{visible.map((category) => <MobileCategoryRow key={category.id} category={category} copy={copy} openEdit={openEdit} setEditor={setEditor} />)}</div>}</section>
     {feedback && !editor && <p role={feedback.tone === "error" ? "alert" : "status"} className={`mt-[12px] text-[11px] ${feedback.tone === "error" ? "text-[#F43F5E]" : "text-[#22C55E]"}`}>{feedback.message}</p>}
     {editor && <MobileCategoryDialog editor={editor} pending={pending} feedback={feedback} copy={copy} iconOptions={iconOptions} colorOptions={colorOptions} setDraft={setDraft} setEditor={setEditor} submit={submit} confirm={confirm} />}
   </div>;
 }
 
-function MobileMetric({ label, value }: { label: string; value: number }) { return <article className="rounded-[16px] border border-[var(--border-default)] bg-[var(--background-subtle)] p-[14px]"><span className="text-[11px] text-[var(--text-secondary)]">{label}</span><strong className="mt-[7px] block text-[24px]">{value}</strong></article>; }
+function MobileMetric({ label, value }: { label: string; value: number | string }) { return <article className="rounded-[16px] border border-[var(--border-default)] bg-[var(--background-subtle)] p-[14px]"><span className="text-[11px] text-[var(--text-secondary)]">{label}</span><strong className="mt-[7px] block text-[24px]">{value}</strong></article>; }
 function MobileFilter({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) { return <button type="button" aria-pressed={active} onClick={onClick} className={`h-[30px] rounded-[15px] px-[12px] text-[10px] font-semibold ${active ? "bg-[#3B82F6] text-white" : "border border-[var(--border-default)] text-[var(--text-secondary)]"}`}>{children}</button>; }
 
 function MobileCategoryRow({ category, copy, openEdit, setEditor }: { category: Category; copy: Copy; openEdit: (category: Category) => void; setEditor: (value: EditorState) => void }) {

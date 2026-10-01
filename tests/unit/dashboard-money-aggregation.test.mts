@@ -47,7 +47,10 @@ test("next best action guards unavailable transaction aggregates", () => {
   const source = readFileSync(new URL("../../src/components/dashboard/next-best-action.ts", import.meta.url), "utf8"); assert.match(source, /if \(!aggregationAvailable \|\| netCashFlow === null\).*transaction_aggregation_unavailable/);
 });
 test("insights guards income usage and recommendations", () => {
-  const source = readFileSync(new URL("../../src/app/insights/page.tsx", import.meta.url), "utf8"); assert.match(source, /summary\.aggregationAvailable && summary\.income > 0/); assert.match(source, /aggregationAvailable: summary\.aggregationAvailable/);
+  const source = readFileSync(new URL("../../src/app/insights/page.tsx", import.meta.url), "utf8");
+  const view = readFileSync(new URL("../../src/components/insights/insights-view-state.ts", import.meta.url), "utf8");
+  assert.match(source, /transactions\?\.available && transactions\.income > 0/);
+  assert.match(view, /aggregationAvailable: summary\.aggregationAvailable/);
 });
 test("AI summary maps unavailable monetary aggregates to null", () => {
   const source = readFileSync(new URL("../../src/ai/tools/financial-summary.ts", import.meta.url), "utf8"); for (const field of ["income", "expenses", "netCashFlow"]) assert.match(source, new RegExp(`${field}: summary\\.aggregationAvailable \\? summary\\.${field} : null`));
@@ -67,5 +70,5 @@ test("dashboard taxonomy failure is independent of budget overlap", () => {
 });
 test("category consumers narrow independently from monetary consumers", () => {
   const insights = readFileSync(new URL("../../src/app/insights/page.tsx", import.meta.url), "utf8"); const ai = readFileSync(new URL("../../src/ai/tools/financial-summary.ts", import.meta.url), "utf8"); const flow = readFileSync(new URL("../../src/components/financial-flow/FinancialFlow.tsx", import.meta.url), "utf8");
-  assert.match(insights, /available={summary\.categoryAggregationAvailable}/); assert.match(ai, /topSpendingCategories: summary\.categoryAggregationAvailable/); assert.match(flow, /categoryAggregationAvailable && expenses !== null/); assert.match(flow, /aggregationAvailable && income !== null && expenses !== null && netCashFlow !== null/);
+  assert.match(insights, /available={view\.categorySpending !== null}/); assert.match(ai, /topSpendingCategories: summary\.categoryAggregationAvailable/); assert.match(flow, /categoryAggregationAvailable && expenses !== null/); assert.match(flow, /aggregationAvailable && income !== null && expenses !== null && netCashFlow !== null/);
 });

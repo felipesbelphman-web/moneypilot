@@ -9,7 +9,7 @@ export type FinanceErrorCode =
 
 export type FinanceErrorDetails = Readonly<{
   field?: string;
-  reason?: "required" | "positive" | "nonnegative" | "finite" | "allowed_value" | "invalid_format" | "invalid_date";
+  reason?: "required" | "positive" | "nonnegative" | "finite" | "allowed_value" | "invalid_format" | "invalid_date" | "incomplete_collection";
 }>;
 
 export class FinanceError extends Error {

@@ -4,6 +4,7 @@ import { useCurrency } from "@/components/CurrencyProvider";
 
 import Image from "next/image";
 import Link from "next/link";
+import { budgetUiCopy } from "@/components/budgets/budget-presentation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
 import type { BudgetProjection } from "@/components/budgets/budget-projection";
@@ -28,7 +29,7 @@ export function BudgetDecisionColumn({ projection, adjustment, month, currentMon
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
   const t = translations[language].appBudgetsContent;
-  const locale = language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE";
+  const locale = language;
   hasBudgets = hasBudgets && projection.available;
   const safeProjection = projection.available ? projection : null;
   const usedLabel = projection.available && projection.budgetUsedPercent !== null ? `${projection.budgetUsedPercent.toLocaleString(locale, { maximumFractionDigits: 1 })}%` : "—";
@@ -64,8 +65,7 @@ export function BudgetDecisionColumn({ projection, adjustment, month, currentMon
     nl: { title: "Resterend uitgavendoel actief", target: "Resterend uitgavendoel", reduction: "Geschatte tempoverlaging" },
     it: { title: "Obiettivo di spesa restante attivo", target: "Obiettivo di spesa restante", reduction: "Riduzione stimata del ritmo" },
   }[language];
-  const goalImpactCopy = ({ en: "The suggested adjustment keeps your goal contribution protected.", pt: "O ajuste sugerido mantém protegida a contribuição para a sua meta.", es: "El ajuste sugerido mantiene protegida la aportación a tu objetivo.", de: "Die vorgeschlagene Anpassung schützt deinen Zielbeitrag.", fr: "L’ajustement suggéré protège votre versement vers l’objectif.", nl: "De voorgestelde aanpassing beschermt je bijdrage aan het doel.", it: "L’aggiustamento suggerito protegge il contributo al tuo obiettivo." })[language];
-  const actionTitle = !hasBudgets
+  const actionTitle = !projection.available ? budgetUiCopy[language].unavailable : !hasBudgets
     ? hasAnyBudgets ? periodCopy.empty : emptyCopy.actionTitle
     : isPastMonth ? periodCopy.actual
     : isFutureMonth ? emptyCopy.forecastUnavailable
@@ -74,7 +74,7 @@ export function BudgetDecisionColumn({ projection, adjustment, month, currentMon
     : safeProjection && safeProjection.adjustmentNeeded > 0
     ? riskCopy.title(money(safeProjection.adjustmentNeeded))
     : dynamic.onTrack;
-  const actionDescription = !hasBudgets
+  const actionDescription = !projection.available ? budgetUiCopy[language].unavailable : !hasBudgets
     ? hasAnyBudgets ? emptyCopy.paceDescription : emptyCopy.actionDescription
     : isPastMonth ? periodCopy.closed
     : isFutureMonth ? periodCopy.future
@@ -93,13 +93,13 @@ export function BudgetDecisionColumn({ projection, adjustment, month, currentMon
     : isFutureMonth ? emptyCopy.forecastUnavailable
     : dynamic.onTrack;
   return (
-    <aside className="relative h-[516px] w-[330px] shrink-0">
+    <aside data-budget-decisions className="relative h-[516px] w-[330px] shrink-0">
       <section className="absolute left-0 top-0 flex h-[158px] w-[330px] flex-col gap-[6px] overflow-hidden rounded-[18px] border border-[#28313B] bg-[rgba(8,11,15,0.22)] px-[12px] py-[10px] shadow-[0_8px_18px_rgba(0,0,0,0.24)] backdrop-blur-[3.5px]">
         <div className="flex h-[20px] items-center gap-[7px]"><Image src={`${iconRoot}/sparkles.svg`} alt="" width={18} height={18} className="size-[18px]" /><h2 className="text-[12px] font-semibold">{t.nextBestAction}</h2></div>
         <p className="text-[8.5px] font-semibold leading-[10px] text-[#3B82F6]">{t.priority}</p>
         <p className="text-[16.5px] font-semibold leading-[19px]">{actionTitle}</p>
         <p className="w-[306px] text-[9.2px] leading-[12px] text-[#9CA6B2]">{actionDescription}</p>
-        <button type="button" onClick={hasBudgets ? onReviewAdjustment : onCreateBudget} disabled={hasBudgets && !adjustment && (!safeProjection || safeProjection.adjustmentNeeded <= 0 || !safeProjection.canProject || safeProjection.remainingDays <= 0 || safeProjection.plannedTotal <= 0)} className="flex h-[26px] w-[306px] items-center justify-center gap-[7px] rounded-[8px] bg-[#3B82F6] text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"><span>{actionButtonLabel}</span><Image src={`${iconRoot}/arrow-right.svg`} alt="" width={16} height={16} className="size-[16px]" /></button>
+        <button type="button" onClick={hasBudgets ? onReviewAdjustment : onCreateBudget} disabled={!projection.available || (hasBudgets && !adjustment && (!safeProjection || safeProjection.adjustmentNeeded <= 0 || !safeProjection.canProject || safeProjection.remainingDays <= 0 || safeProjection.plannedTotal <= 0))} className="flex h-[26px] w-[306px] items-center justify-center gap-[7px] rounded-[8px] bg-[#3B82F6] text-[10px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"><span>{actionButtonLabel}</span><Image src={`${iconRoot}/arrow-right.svg`} alt="" width={16} height={16} className="size-[16px]" /></button>
       </section>
 
       <section className="absolute left-0 top-[170px] flex h-[184px] w-[330px] flex-col gap-[6px] overflow-hidden rounded-[18px] border border-[#28313B] bg-[rgba(8,11,15,0.22)] px-[12px] py-[10px] shadow-[0_8px_18px_rgba(0,0,0,0.24)] backdrop-blur-[3.5px]">
@@ -111,10 +111,10 @@ export function BudgetDecisionColumn({ projection, adjustment, month, currentMon
       </section>
 
       <section className="absolute left-0 top-[366px] flex h-[150px] w-[330px] flex-col gap-[6px] overflow-hidden rounded-[18px] border border-[#28313B] bg-[rgba(8,11,15,0.22)] px-[12px] py-[10px] shadow-[0_8px_18px_rgba(0,0,0,0.24)] backdrop-blur-[3.5px]">
-        <div className="flex h-[20px] items-center justify-between"><div className="flex items-center gap-[7px]"><Image src={`${iconRoot}/target.svg`} alt="" width={18} height={18} className="size-[18px]" /><h2 className="text-[12px] font-semibold">{t.goalImpact}</h2></div>{hasGoals && <span className="flex h-[18px] w-[58px] items-center justify-center rounded-[9px] bg-[#3B82F6]/10 text-[8px] font-semibold text-[#3B82F6]">{t.trip}</span>}</div>
-        <p className="text-[12.5px] font-semibold leading-[16px]">{hasGoals ? t.delayText : emptyCopy.noGoal}</p>
-        <p className="text-[9.2px] leading-[12px] text-[#9CA6B2]">{hasGoals ? goalImpactCopy : emptyCopy.goalDescription}</p>
-        <Link href="/goals" className="flex h-[24px] w-[306px] items-center justify-center gap-[6px] rounded-[7px] border border-[#28313B] text-[9.2px] font-semibold text-[#3B82F6]">{hasGoals ? t.viewGoalImpact : emptyCopy.createGoal} <Image src={`${iconRoot}/arrow-right.svg`} alt="" width={15} height={15} className="size-[15px]" /></Link>
+        <div className="flex h-[20px] items-center justify-between"><div className="flex items-center gap-[7px]"><Image src={`${iconRoot}/target.svg`} alt="" width={18} height={18} className="size-[18px]" /><h2 className="text-[12px] font-semibold">{t.goalImpact}</h2></div></div>
+        <p className="text-[12.5px] font-semibold leading-[16px]">{hasGoals ? budgetUiCopy[language].unavailable : emptyCopy.noGoal}</p>
+        <p className="text-[9.2px] leading-[12px] text-[#9CA6B2]">{budgetUiCopy[language].goal}</p>
+        <Link href="/goals" aria-disabled={hasGoals || undefined} tabIndex={hasGoals ? -1 : undefined} onClick={(event) => { if (hasGoals) event.preventDefault(); }} className="flex h-[24px] w-[306px] items-center justify-center gap-[6px] rounded-[7px] border border-[#28313B] text-[9.2px] font-semibold text-[#3B82F6]">{hasGoals ? t.viewGoalImpact : emptyCopy.createGoal} <Image src={`${iconRoot}/arrow-right.svg`} alt="" width={15} height={15} className="size-[15px]" /></Link>
       </section>
     </aside>
   );

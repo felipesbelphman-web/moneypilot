@@ -5,6 +5,7 @@ import type { Investment } from "@/components/investments/investment-model";
 import type { Transaction, TransactionClassificationUpdate, TransactionCreateInput, TransactionUpdateInput } from "@/components/transactions/transaction-model";
 import type { AccountBalanceSettings, AccountBalanceSettingsInput } from "@/lib/domain/account-balance-settings";
 import type { FinanceLoadResult, FinanceUserId } from "@/lib/persistence/finance-persistence-model";
+import type { CompletePeriodResult, TransactionDateRange } from "./finance-query-contracts.ts";
 
 /**
  * User-scoped persistence boundary for financial source records.
@@ -16,6 +17,7 @@ import type { FinanceLoadResult, FinanceUserId } from "@/lib/persistence/finance
  */
 export interface FinanceRepository {
   loadFinanceData(userId: FinanceUserId): Promise<FinanceLoadResult>;
+  listTransactionsForPeriod(userId: FinanceUserId, range: TransactionDateRange): Promise<CompletePeriodResult<Transaction>>;
   getAccountBalanceSettings(userId: FinanceUserId): Promise<AccountBalanceSettings | null>;
   saveAccountBalanceSettings(userId: FinanceUserId, settings: AccountBalanceSettingsInput): Promise<AccountBalanceSettings>;
 

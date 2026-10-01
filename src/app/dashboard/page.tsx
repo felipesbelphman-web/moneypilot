@@ -2,30 +2,47 @@
 
 import { useCurrency } from "@/components/CurrencyProvider";
 
+
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFinanceData } from "@/components/FinanceDataProvider";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
 import { ThemeControl } from "@/components/navigation/ThemeControl";
+import { AccountAvatar } from "@/components/profile/AccountAvatar";
 import { useAccountProfile } from "@/components/profile/AccountProfileProvider";
 import { markWelcomeSeen } from "@/app/settings/actions";
 import { getDisplayCategorySpending, SpendingRadialChart } from "@/components/charts/SpendingRadialChart";
 import { DashboardKpiCards } from "@/components/dashboard/DashboardKpiCards";
-import { DashboardEmptyState, DashboardErrorState, DashboardLoadingState } from "@/components/dashboard/DashboardSystemStates";
+import { DashboardEmptyState, DashboardLoadingState, DashboardSectionState } from "@/components/dashboard/DashboardSystemStates";
 import { DashboardToast, type DashboardToastState } from "@/components/dashboard/DashboardToast";
 import { DashboardMonthSelector } from "@/components/dashboard/DashboardMonthSelector";
-import { calculateDashboardFinancialSummary, getDashboardMonth, type DashboardCategorySpending } from "@/components/dashboard/dashboard-financial-summary";
-import { resolveDashboardViewState } from "@/components/dashboard/dashboard-view-state";
+import { getDashboardMonth, type DashboardCategorySpending } from "@/components/dashboard/dashboard-financial-summary";
+import { dashboardCalendarRange, dashboardFinancialExistence, dashboardFinancialRange, getDashboardFinancialView, getDashboardPeriodCoverage, type DashboardSectionStatus } from "@/components/dashboard/dashboard-view-state";
 import { GoalsStatusCard } from "@/components/dashboard/GoalsStatusCard";
 import { MonthlyStatusCard } from "@/components/dashboard/MonthlyStatusCard";
 import { NextBestActionCard } from "@/components/dashboard/NextBestActionCard";
-import { calculateNextBestAction } from "@/components/dashboard/next-best-action";
 import { UpcomingBillsCard } from "@/components/dashboard/UpcomingBillsCard";
 import { FinancialFlow } from "@/components/financial-flow/FinancialFlow";
+import { FinancialCalendar } from "@/components/dashboard/FinancialCalendar";
+import { eventsFromTransactions, localDateKey, selectedDayForMonth, validMonth } from "@/components/dashboard/financial-calendar-model";
+import { financialCalendarCopy } from "@/i18n/financial-calendar-copy";
+
+const idlePeriod = { status: "idle" as const };
+
+const dashboardHeadings = {
+  en: ["Your cash flow", "Goal status", "Monthly status"],
+  pt: ["Seu fluxo de caixa", "Status da meta", "Status do mês"],
+  es: ["Tu flujo de caja", "Estado de la meta", "Estado del mes"],
+  de: ["Dein Cashflow", "Zielstatus", "Monatsstatus"],
+  fr: ["Votre trésorerie", "État de l’objectif", "Bilan du mois"],
+  nl: ["Je kasstroom", "Doelstatus", "Maandstatus"],
+  it: ["Il tuo flusso di cassa", "Stato dell’obiettivo", "Stato del mese"],
+} as const;
 
 export default function DashboardPage() {
   const { language } = useLanguage();
+
   const { account } = useAccountProfile();
 
   const {
@@ -36,8 +53,9 @@ export default function DashboardPage() {
     budgetAdjustments,
     goals,
     goalContributionPlans,
-    isHydrating,
-    hydrationError,
+    resourceStatuses,
+    getTransactionPeriodState,
+    ensureTransactionPeriod,
   } = useFinanceData();
 
   const t = translations[language].appDashboard;
@@ -50,66 +68,47 @@ export default function DashboardPage() {
   const [now] = useState(() => new Date());
   const [month, setMonth] = useState(() => getDashboardMonth(now));
   const currentMonth = getDashboardMonth(now);
+  const [calendarView, setCalendarView] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(() => localDateKey(now));
+  const calendarCopy = financialCalendarCopy[language];
+  const financialRange = useMemo(() => dashboardFinancialRange(month), [month]);
+  const calendarRange = useMemo(() => dashboardCalendarRange(month), [month]);
+  const financialPeriod = financialRange ? getTransactionPeriodState(financialRange) : idlePeriod;
+  const calendarPeriod = calendarRange ? getTransactionPeriodState(calendarRange) : idlePeriod;
+  const requestedFinancial = useRef<string | null>(null);
+  const requestedCalendar = useRef<string | null>(null);
+  useEffect(() => {
+    if (!financialRange) return;
+    if (requestedFinancial.current !== month || financialPeriod.status === "idle" || financialPeriod.status === "stale") {
+      requestedFinancial.current = month;
+      void ensureTransactionPeriod(financialRange);
+    }
+  }, [month, financialRange, financialPeriod.status, getTransactionPeriodState, ensureTransactionPeriod]);
+  useEffect(() => {
+    if (!calendarView || !calendarRange) return;
+    const key = calendarRange.startISO + "/" + calendarRange.endExclusiveISO;
+    if (requestedCalendar.current !== key || calendarPeriod.status === "idle" || calendarPeriod.status === "stale") {
+      requestedCalendar.current = key;
+      void ensureTransactionPeriod(calendarRange);
+    }
+  }, [calendarView, calendarRange, calendarPeriod.status, getTransactionPeriodState, ensureTransactionPeriod]);
+  const calendarCoverage = useMemo(() => getDashboardPeriodCoverage(calendarPeriod, calendarRange), [calendarPeriod, calendarRange]);
+  const calendarEvents = useMemo(() => calendarCoverage.rows === null ? null : eventsFromTransactions(calendarCoverage.rows), [calendarCoverage.rows]);
+  function changeMonth(value: string) {
+    if (!validMonth(value) || !dashboardFinancialRange(value)) return;
+    setMonth(value);
+    setSelectedDay(selectedDayForMonth(value, localDateKey()));
+  }
+  function selectDay(day: string) {
+    if (!validMonth(day.slice(0, 7)) || !dashboardFinancialRange(day.slice(0, 7))) return;
+    setSelectedDay(day);
+    setMonth(day.slice(0, 7));
+  }
 
-  const selectedPeriodSummary = useMemo(
-    () =>
-      calculateDashboardFinancialSummary({
-        transactions,
-        budgets,
-        budgetAdjustments,
-        goals,
-        goalContributionPlans,
-        month,
-        now,
-      }),
-    [
-      budgetAdjustments,
-      budgets,
-      goalContributionPlans,
-      goals,
-      month,
-      now,
-      transactions,
-    ],
-  );
-
-  const nextBestAction = useMemo(
-    () =>
-      calculateNextBestAction({
-        selectedMonth: month,
-        currentMonth,
-        aggregationAvailable: selectedPeriodSummary.aggregationAvailable,
-        monthlyStatus: selectedPeriodSummary.monthlyStatus,
-        budgetProjection: selectedPeriodSummary.budgetProjection,
-        safeSavingsCapacity: selectedPeriodSummary.safeSavingsCapacity,
-        netCashFlow: selectedPeriodSummary.netCashFlow,
-        primaryGoal: selectedPeriodSummary.primaryGoal,
-        goalsAvailable: selectedPeriodSummary.goalsAvailable,
-        hasGoals: selectedPeriodSummary.hasGoals,
-        activeBudgetAdjustment: budgetAdjustments[month],
-        hasTransactions: selectedPeriodSummary.hasTransactions,
-      }),
-    [
-      budgetAdjustments,
-      currentMonth,
-      month,
-      selectedPeriodSummary.budgetProjection,
-      selectedPeriodSummary.aggregationAvailable,
-      selectedPeriodSummary.hasTransactions,
-      selectedPeriodSummary.goalsAvailable,
-      selectedPeriodSummary.hasGoals,
-      selectedPeriodSummary.monthlyStatus,
-      selectedPeriodSummary.netCashFlow,
-      selectedPeriodSummary.primaryGoal,
-      selectedPeriodSummary.safeSavingsCapacity,
-    ],
-  );
-
-  const viewState = resolveDashboardViewState({
-    isLoading: isHydrating,
-    error: hydrationError,
-    hasFinancialData: selectedPeriodSummary.hasFinancialData || accountBalanceSettings !== null,
-  });
+  const financialView = useMemo(() => getDashboardFinancialView({ period: financialPeriod, resourceStatuses, budgets, budgetAdjustments, goals, goalContributionPlans, month, now }), [financialPeriod, resourceStatuses, budgets, budgetAdjustments, goals, goalContributionPlans, month, now]);
+  const selectedPeriodSummary = financialView.metrics;
+  const hasFinancialData = dashboardFinancialExistence({ selectedRows: financialView.rows, resourceStatuses, transactions, budgets, goals, accountBalanceSettings });
+  const historicalTransactionDates = useMemo(() => resourceStatuses.transactions.status === "ready" ? transactions.map(transaction => transaction.dateISO) : [], [resourceStatuses.transactions.status, transactions]);
 
   useEffect(() => {
     if (account && !account.profile.has_seen_welcome) {
@@ -122,137 +121,90 @@ export default function DashboardPage() {
   const fullName = account?.profile.display_name?.trim() ?? "";
 
   return (
-    <div data-dashboard-page className="dashboard-page-shell">
+    <div data-dashboard-page data-calendar-view={calendarView} className="dashboard-page-shell">
       <div className="dashboard-shell">
-        <main className="dashboard-main">
+        <div className="dashboard-main">
           <div className="dashboard-theme-row">
+            {<div className="dashboard-day-logo" aria-label="MoneyPilot">
+              <Image src="/moneypilot/dashboard/day/logomark.svg" alt="" width={37} height={37} />
+              <span>MoneyPilot</span>
+            </div>}
+            <Image className="dashboard-dark-logo" src="/moneypilot/moneypilot-logo-white.svg" alt="MoneyPilot" width={177} height={37} />
             <ThemeControl orientation="horizontal" />
           </div>
 
           <header className="dashboard-header">
             <div className="dashboard-header__title">
-              <span>{hasSeenWelcome === false ? t.welcome : t.welcomeBack}</span>
-              <h1>{fullName || "—"}</h1>
+              <span>{calendarView ? calendarCopy.description : hasSeenWelcome === false ? t.welcome : t.welcomeBack}</span>
+              <h1>{calendarView ? calendarCopy.title : fullName || "—"}</h1>
             </div>
 
             <div className="dashboard-header__controls">
-              <button type="button" className="dashboard-cta-button">Manual + CSV</button>
+              {calendarView ? <button type="button" className="dashboard-cta-button" onClick={() => setCalendarView(false)}>{calendarCopy.back}</button> : <button type="button" className="dashboard-cta-button">Manual + CSV</button>}
               <DashboardMonthSelector
                 language={language}
                 month={month}
-                currentMonth={currentMonth}
-                transactionDates={transactions.map((transaction) => transaction.dateISO)}
-                onMonthChange={setMonth}
+                currentMonth={calendarView ? localDateKey().slice(0, 7) : currentMonth}
+                transactionDates={historicalTransactionDates}
+                onMonthChange={changeMonth}
+                onOpenCalendar={() => setCalendarView(true)}
               />
+              <div className="dashboard-dark-avatar"><AccountAvatar size={52} /></div>
             </div>
           </header>
 
-          {viewState === "loading" ? (
-            <DashboardLoadingState />
-          ) : viewState === "error" ? (
-            hydrationError && <DashboardErrorState error={hydrationError} />
-          ) : viewState === "empty" ? (
+          {calendarView ? (
+            calendarEvents !== null ? <FinancialCalendar month={month} today={localDateKey()} selectedDay={selectedDay} events={calendarEvents} onSelectDay={selectDay} /> : calendarCoverage.status === "loading" ? <DashboardLoadingState /> : <DashboardSectionState status="error" />
+          ) : hasFinancialData === false && financialView.status === "ready" ? (
             <DashboardEmptyState />
           ) : (
             <>
               <DashboardKpiCards
                 month={month}
-                aggregationAvailable={selectedPeriodSummary.aggregationAvailable}
-                income={selectedPeriodSummary.income}
-                expenses={selectedPeriodSummary.expenses}
-                netCashFlow={selectedPeriodSummary.netCashFlow}
+                aggregationAvailable={selectedPeriodSummary?.aggregationAvailable ?? false}
+                income={selectedPeriodSummary?.income ?? null}
+                expenses={selectedPeriodSummary?.expenses ?? null}
+                netCashFlow={selectedPeriodSummary?.netCashFlow ?? null}
                 accountBalance={accountBalance}
                 showValues={showFinancialValues}
                 onToggleValues={() => setShowFinancialValues((value) => !value)}
               />
 
-               <article className="mobile-app-card">
-                  <div className="mobile-app-card__copy">
-                    <div className="mobile-app-card__text">
-
-                      <h2>Your MoneyPilot, everywhere.</h2>
-
-                      <p>
-                        Your financial assistant is coming to mobile.
-                        <br />
-                        Track spending, goals, investments and insights wherever you are.
-                      </p>
-                    </div>
-
-                    <div className="mobile-app-card__store-badges">
-                      <Image
-                        src="/moneypilot/dashboard/mobile-banner/app-store-badge.svg"
-                        alt="Download on the App Store"
-                        width={90}
-                        height={30}
-                      />
-
-                      <Image
-                        src="/moneypilot/dashboard/mobile-banner/google-play-badge.svg"
-                        alt="Get it on Google Play"
-                        width={90}
-                        height={30}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mobile-app-card__phones" aria-hidden="true">
-                    <Image
-                      className="mobile-app-card__phone-left"
-                      src="/moneypilot/dashboard/mobile-banner/iphone-left.png"
-                      alt=""
-                      width={231}
-                      height={231}
-                    />
-
-                    <Image
-                      className="mobile-app-card__phone-front"
-                      src="/moneypilot/dashboard/mobile-banner/iphone-front.png"
-                      alt=""
-                      width={249}
-                      height={249}
-                    />
-                  </div>
-
-                  <button className="mobile-app-card__cta" type="button">
-                    Coming soon
-                  </button>
-                </article>
-
               <div className="dashboard-flow-row">
-                <FinancialFlow
+                {selectedPeriodSummary ? <FinancialFlow
+                  title={dashboardHeadings[language][0]}
                   month={month}
-                  aggregationAvailable={selectedPeriodSummary.aggregationAvailable}
+                  aggregationAvailable={selectedPeriodSummary?.aggregationAvailable ?? false}
                   categoryAggregationAvailable={selectedPeriodSummary.categoryAggregationAvailable}
                   transactions={selectedPeriodSummary.monthTransactions}
-                  income={selectedPeriodSummary.income}
+                  income={selectedPeriodSummary?.income ?? null}
                   incomeAveragePerDay={selectedPeriodSummary.incomeAveragePerDay}
                   largestIncome={selectedPeriodSummary.largestIncome}
-                  expenses={selectedPeriodSummary.expenses}
-                  netCashFlow={selectedPeriodSummary.netCashFlow}
+                  expenses={selectedPeriodSummary?.expenses ?? null}
+                  netCashFlow={selectedPeriodSummary?.netCashFlow ?? null}
                   categorySpending={selectedPeriodSummary.categorySpending}
                   showValues={showFinancialValues}
-                />
-                <SpendingCategoriesCard data={selectedPeriodSummary.categorySpending} total={selectedPeriodSummary.expenses} showValues={showFinancialValues} />
+                /> : <article className="relative flex h-[209px] w-[677px] shrink-0 flex-col justify-center gap-[10px] overflow-hidden rounded-[19px] border border-[var(--financial-flow-border)] bg-[var(--financial-flow-surface)] shadow-[var(--financial-flow-shadow)] backdrop-blur-[12px] p-[12px]"><h2 className="text-[14px] font-semibold">{dashboardHeadings[language][0]}</h2><DashboardSectionState status={financialView.status === "loading" ? "loading" : "error"} /></article>}
+                <SpendingCategoriesCard availability={financialView.status} data={selectedPeriodSummary?.categoryAggregationAvailable ? selectedPeriodSummary.categorySpending : null} total={selectedPeriodSummary?.expenses ?? null} showValues={showFinancialValues} />
               </div>
 
               <div className="dashboard-secondary-row">
-                <GoalsStatusCard goal={selectedPeriodSummary.primaryGoal} currentMonth={currentMonth} showValues={showFinancialValues} />
-                <NextBestActionCard action={nextBestAction} month={month} currentMonth={currentMonth} />
+                <GoalsStatusCard title={dashboardHeadings[language][1]} goal={financialView.primaryGoal} availability={financialView.goalsStatus} plansStatus={financialView.plansStatus} planReviewStatus={financialView.planReviewStatus} currentMonth={currentMonth} showValues={showFinancialValues} />
+                <NextBestActionCard action={financialView.action} availability={financialView.recommendationStatus} month={month} currentMonth={currentMonth} />
                 <UpcomingBillsCard />
-                <MonthlyStatusCard month={month} currentMonth={currentMonth} status={selectedPeriodSummary.monthlyStatus} projection={selectedPeriodSummary.budgetProjection} showValues={showFinancialValues} />
+                <MonthlyStatusCard presentation="verdict" title={dashboardHeadings[language][2]} month={month} currentMonth={currentMonth} status={financialView.monthlyStatus} projection={financialView.projection} availability={financialView.projectionStatus} showValues={showFinancialValues} />
               </div>
             </>
           )}
-        </main>
+        </div>
       </div>
 
-      {viewState === "ready" && toast && <DashboardToast toast={toast} onClose={() => setToast(null)} />}
+      {hasFinancialData !== false && toast && <DashboardToast toast={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
 
-function SpendingCategoriesCard({ data, total, showValues }: { data: DashboardCategorySpending[]; total: number | null; showValues: boolean }) {
+function SpendingCategoriesCard({ data, total, showValues, availability }: { availability: DashboardSectionStatus; data: DashboardCategorySpending[] | null; total: number | null; showValues: boolean }) {
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
   const t = translations[language].appDashboard;
@@ -271,6 +223,10 @@ function SpendingCategoriesCard({ data, total, showValues }: { data: DashboardCa
     );
   }
 
+  if (data === null) return <article className="flex h-[209px] w-[411px] shrink-0 flex-col justify-between overflow-hidden rounded-[19.307px] border border-[#28313B] bg-[rgba(8,11,15,0.20)] p-[12px]">
+    <div className="flex items-center gap-[7px]"><Image src="/moneypilot/dashboard-spending-title-icon.svg" alt="" width={18} height={18} className="size-[18px]" /><h2 className="text-[14px] font-semibold text-[#F5F7FA]">{t.spendingTitle}</h2></div>
+    <DashboardSectionState status={availability === "loading" ? "loading" : "error"} />
+  </article>;
   const displayData = getDisplayCategorySpending(data);
   const topCategory = data[0];
   const topCategoryLabel = topCategory ? (topCategory.localizationKey ? t[topCategory.localizationKey] : topCategory.category) : "";

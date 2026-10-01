@@ -3,12 +3,16 @@
 import { useCurrency } from "@/components/CurrencyProvider";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { DesktopInternalPagePanel, DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
+import { AccountAvatar } from "@/components/profile/AccountAvatar";
+import { GoalsModalLayer } from "@/components/goals/GoalsModalLayer";
+import { goalsPresentationCopy } from "@/components/goals/goals-presentation";
+import "./goals.css";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DeleteGoalModal } from "@/components/goals/DeleteGoalModal";
 import { GoalModal } from "@/components/goals/GoalModal";
 import { GoalSavingsPlanModal } from "@/components/goals/GoalSavingsPlanModal";
 import { calculateGoal } from "@/components/goals/goal-calculations";
+import { getGoalsAvailability } from "@/components/goals/goal-availability";
 import { calculateGoalPlanImpact, calculateGoalPlanMonthlyTarget, isGoalContributionPlanStale } from "@/components/goals/goal-contribution-plan";
 import { calculateGoalSavingsCapacity, getCurrentFinancialMonth } from "@/components/goals/goal-savings-capacity";
 import type { Goal } from "@/components/goals/goal-model";
@@ -16,9 +20,12 @@ import { formatGoalTargetDate, selectPrimaryGoal } from "@/components/goals/goal
 import { useFinanceData } from "@/components/FinanceDataProvider";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
+import { financialMonthRange } from "@/lib/dates/financial-month-range";
+import { readyTransactionPeriod } from "@/lib/persistence/transaction-period-state";
+import { requireCompletePeriodResult } from "@/lib/persistence/finance-query-contracts";
 
 const iconRoot = "/moneypilot/goals/icons";
-const cardClass = "overflow-hidden rounded-[20px] border border-[#28313B] bg-[#080B0F]/20";
+const cardClass = "goals-card";
 
 const metricSpecs = [
   { icon: "accent-primary.svg" }, { icon: "accent-contribution.svg" }, { icon: "accent-progress.svg", progress: true }, { icon: "accent-savings.svg" },
@@ -28,13 +35,30 @@ const actionIcons = ["insight-blue.svg", "insight-green.svg", "insight-teal.svg"
 export default function GoalsPage() {
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
-  const { goals, goalContributionPlans, budgets, transactions, budgetAdjustments, upsertGoal, deleteGoal, upsertGoalContributionPlan } = useFinanceData();
+  const { goals, goalContributionPlans, budgets, budgetAdjustments, resourceStatuses, getTransactionPeriodState, ensureTransactionPeriod, upsertGoal, deleteGoal, upsertGoalContributionPlan } = useFinanceData();
+  const currentMonth = getCurrentFinancialMonth();
+  const currentRange = useMemo(() => financialMonthRange(currentMonth), [currentMonth]);
+  const period = getTransactionPeriodState(currentRange);
+  const periodResult = readyTransactionPeriod(period);
+  const transactions = useMemo(() => periodResult ? [...requireCompletePeriodResult(periodResult, currentRange).items] : null, [periodResult, currentRange]);
+  const requestedMonth = useRef<string | null>(null);
+  useEffect(() => {
+    if (requestedMonth.current !== currentMonth || period.status === "idle" || period.status === "stale") {
+      requestedMonth.current = currentMonth;
+      void ensureTransactionPeriod(currentRange);
+    }
+  }, [currentMonth, currentRange, period.status, getTransactionPeriodState, ensureTransactionPeriod]);
+  const latestInputs = useRef({ goals, budgets, budgetAdjustments, goalContributionPlans, resourceStatuses });
+  useEffect(() => { latestInputs.current = { goals, budgets, budgetAdjustments, goalContributionPlans, resourceStatuses }; }, [goals, budgets, budgetAdjustments, goalContributionPlans, resourceStatuses]);
+  const availability = getGoalsAvailability(resourceStatuses, period);
+  const isHydrating = availability.isLoading;
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [modal, setModal] = useState<{ mode: "create" } | { mode: "edit"; goalId: string } | null>(null);
   const [deleteGoalId, setDeleteGoalId] = useState<string | null>(null);
   const [planGoalId, setPlanGoalId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const t = translations[language].appGoals;
+  const ui = goalsPresentationCopy[language];
   const emptyCopy = language === "pt"
     ? { createFirst: "Crie sua primeira meta", chooseGoal: "Escolha para o que está economizando e o MoneyPilot calculará o aporte necessário.", noProgress: "Ainda não existe progresso de meta", noSavingsPlan: "Ainda não existe plano de economia", savingsPlan: "Plano de economia", unavailable: "Ainda não disponível", createForSavings: "Crie uma meta para calcular um plano de economia.", estimatedCost: "Custo estimado da meta", addTarget: "Adicione um valor-alvo para calcular o custo da meta.", target: "Valor-alvo", saved: "Guardado", remaining: "Restante", actionPlan: "Plano de ação", noActionPlan: "Ainda não existe plano de ação", createForActions: "Crie uma meta para gerar os próximos passos.", planUnavailable: "As sugestões por categoria ainda não estão disponíveis.", actionsUnavailable: "As próximas etapas ainda não estão disponíveis." }
     : language === "es"
@@ -53,22 +77,21 @@ export default function GoalsPage() {
     nl: { month: "maand", noGoals: "Nog geen doelen", goal: "doel", complete: "voltooid", remaining: "resterend", room: "Huidige budgetruimte", earlier: "maanden eerder", noCapacity: "Deze maand geen extra spaarruimte", completed: "Doel voltooid", passed: "Doeldatum verstreken", due: "Deze maand benodigd bedrag", until: "maanden tot", planActive: "Spaarplan actief", review: "controle nodig", found: "MoneyPilot vond", roomInBudget: "voorzichtige ruimte in het huidige budget.", attention: "Het budget vraagt aandacht voordat je de doelinleg verhoogt.", adjustment: "Er is een actieve budgetaanpassing, maar de ruimte gebruikt alleen de huidige verwachting.", headroom: "De verwachte budgetruimte is", buffer: "50% blijft als veiligheidsmarge.", directing: "De veilige ruimte kan de schatting voor dit doel verminderen met", noImpact: "Het huidige budget geeft geen extra effect op het doel.", createTracking: "Maak een doel om je voortgang te volgen.", of: "van", active: "Actief", pastDue: "Verlopen", dueMonth: "Deze maand verschuldigd", reviewPlan: "Plan bekijken", apply: "Toepassen", noCapacityButton: "Deze maand geen ruimte" },
     it: { month: "mese", noGoals: "Nessun obiettivo", goal: "obiettivo", complete: "completato", remaining: "rimanenti", room: "Margine attuale del budget", earlier: "mesi prima", noCapacity: "Nessuna capacità aggiuntiva questo mese", completed: "Obiettivo completato", passed: "Data obiettivo superata", due: "Importo necessario questo mese", until: "mesi fino a", planActive: "Piano di risparmio attivo", review: "revisione necessaria", found: "MoneyPilot ha trovato", roomInBudget: "di margine prudenziale nel budget attuale.", attention: "Il budget richiede attenzione prima di aumentare il contributo.", adjustment: "È presente una modifica attiva, ma la capacità usa solo la previsione attuale.", headroom: "Il margine previsto del budget è", buffer: "Il 50% viene mantenuto come riserva di sicurezza.", directing: "Destinare la capacità sicura può ridurre la stima di", noImpact: "Il budget attuale non produce un impatto aggiuntivo.", createTracking: "Crea un obiettivo per iniziare a seguire i progressi.", of: "su", active: "Attivo", pastDue: "Scaduto", dueMonth: "In scadenza questo mese", reviewPlan: "Rivedi piano", apply: "Applica", noCapacityButton: "Nessuna capacità questo mese" },
   }[language];
-  const primaryGoal = selectPrimaryGoal(goals);
-  const selectedGoal = goals.find((goal) => goal.id === selectedGoalId) ?? primaryGoal;
-  const editedGoal = modal?.mode === "edit" ? goals.find((goal) => goal.id === modal.goalId) : undefined;
-  const goalToDelete = goals.find((goal) => goal.id === deleteGoalId);
-  const planGoal = goals.find((goal) => goal.id === planGoalId);
+  const primaryGoal = availability.goalsReady ? selectPrimaryGoal(goals) : null;
+  const selectedGoal = availability.goalsReady ? goals.find((goal) => goal.id === selectedGoalId) ?? primaryGoal : null;
+  const editedGoal = availability.goalsReady && modal?.mode === "edit" ? goals.find((goal) => goal.id === modal.goalId) : undefined;
+  const goalToDelete = availability.goalsReady ? goals.find((goal) => goal.id === deleteGoalId) : undefined;
+  const planGoal = availability.canApplyPlan ? goals.find((goal) => goal.id === planGoalId) : undefined;
   const planResult = planGoal ? calculateGoal(planGoal) : null;
   const primaryResult = primaryGoal ? calculateGoal(primaryGoal) : null;
   const selectedResult = selectedGoal ? calculateGoal(selectedGoal) : null;
   const planCalculation = planResult?.available ? planResult : null;
   const primaryCalculation = primaryResult?.available ? primaryResult : null;
   const selectedCalculation = selectedResult?.available ? selectedResult : null;
-  const currentMonth = getCurrentFinancialMonth();
-  const savingsCapacity = useMemo(() => calculateGoalSavingsCapacity({ budgets, transactions, month: currentMonth, adjustment: budgetAdjustments[currentMonth] }), [budgetAdjustments, budgets, currentMonth, transactions]);
-  const selectedPlan = selectedGoal ? goalContributionPlans[selectedGoal.id] : undefined;
+  const savingsCapacity = useMemo(() => availability.savingsReady && transactions ? calculateGoalSavingsCapacity({ budgets, transactions, month: currentMonth, adjustment: budgetAdjustments[currentMonth] }) : null, [availability.savingsReady, budgetAdjustments, budgets, currentMonth, transactions]);
+  const selectedPlan = availability.plansReady && selectedGoal ? goalContributionPlans[selectedGoal.id] : undefined;
   const selectedPlanImpact = selectedPlan && selectedCalculation ? calculateGoalPlanImpact(selectedCalculation.remainingAmount, selectedPlan.baselineRequiredMonthlyContribution, selectedPlan.monthlyTarget) : null;
-  const availableCapacity = !savingsCapacity.available ? null : primaryCalculation?.isCompleted ? 0 : savingsCapacity.safeMonthlyCapacity;
+  const availableCapacity = !availability.goalsReady || !savingsCapacity?.available ? null : primaryCalculation?.isCompleted ? 0 : savingsCapacity.safeMonthlyCapacity;
   const availableMonthlyTarget = availableCapacity !== null && primaryCalculation?.requiredMonthlyContribution !== null && primaryCalculation?.requiredMonthlyContribution !== undefined ? calculateGoalPlanMonthlyTarget(primaryCalculation.requiredMonthlyContribution, availableCapacity) : null;
   const availableImpact = availableMonthlyTarget?.available && primaryCalculation?.requiredMonthlyContribution !== null && primaryCalculation?.requiredMonthlyContribution !== undefined ? calculateGoalPlanImpact(primaryCalculation.remainingAmount, primaryCalculation.requiredMonthlyContribution, availableMonthlyTarget.value) : null;
   const percentage = (ratio: number) => `${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(ratio * 100)}%`;
@@ -78,14 +101,15 @@ export default function GoalsPage() {
     ...item,
     ...(index === 2 && !primaryCalculation ? { ...metricSpecs[index], progress: false } : metricSpecs[index]),
     value: index === 0 ? primaryGoal?.name ?? dynamic.noGoals : index === 1 ? contributionValue(primaryCalculation) : index === 2 ? primaryGoal && primaryCalculation ? money(primaryGoal.savedAmount) : "—" : availableCapacity !== null ? `${money(availableCapacity)} / ${dynamic.month}` : "—",
-    detail: index === 0 ? primaryGoal ? `${formatGoalTargetDate(primaryGoal.targetDate, language)} · ${primaryGoal.priority} ${dynamic.goal}` : emptyCopy.createFirst : index === 1 ? contributionDetail(primaryCalculation, primaryGoal?.targetDate) : index === 2 ? primaryCalculation ? `${percentage(primaryCalculation.progressRatio)} ${dynamic.complete} · ${money(primaryCalculation.remainingAmount)} ${dynamic.remaining}` : emptyCopy.noProgress : !primaryGoal ? emptyCopy.noSavingsPlan : availableCapacity !== null && availableCapacity > 0 ? `${dynamic.room} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}` : dynamic.noCapacity,
+    detail: index === 0 ? primaryGoal ? `${formatGoalTargetDate(primaryGoal.targetDate, language)} · ${primaryGoal.priority} ${dynamic.goal}` : emptyCopy.createFirst : index === 1 ? contributionDetail(primaryCalculation, primaryGoal?.targetDate) : index === 2 ? primaryCalculation ? `${percentage(primaryCalculation.progressRatio)} ${dynamic.complete} · ${money(primaryCalculation.remainingAmount)} ${dynamic.remaining}` : emptyCopy.noProgress : !availability.savingsReady ? emptyCopy.unavailable : !primaryGoal ? emptyCopy.noSavingsPlan : availableCapacity !== null && availableCapacity > 0 ? `${dynamic.room} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}` : dynamic.noCapacity,
   }));
-  const liveContributionCopy = selectedPlan && selectedPlanImpact ? `${dynamic.planActive} · ${money(selectedPlan.monthlyTarget)}/${dynamic.month} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(selectedPlanImpact.estimatedMonthsEarlier)} ${dynamic.earlier}${selectedCalculation && savingsCapacity.available && isGoalContributionPlanStale(selectedPlan, selectedCalculation.requiredMonthlyContribution, savingsCapacity.safeMonthlyCapacity) ? ` · ${dynamic.review}` : ""}.` : savingsCapacity.available && savingsCapacity.canContribute ? `${dynamic.found} ${money(savingsCapacity.safeMonthlyCapacity)}/${dynamic.month} ${dynamic.roomInBudget}` : dynamic.attention;
-  const capacityContextCopy = savingsCapacity.source === "active_adjustment" ? dynamic.adjustment : savingsCapacity.available ? `${dynamic.headroom} ${money(savingsCapacity.rawCapacity)}; ${dynamic.buffer}` : dynamic.attention;
-  const impactCopy = availableCapacity !== null && availableCapacity > 0 ? `${dynamic.directing} ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}.` : dynamic.noImpact;
+  const liveContributionCopy = !availability.plansReady ? emptyCopy.unavailable : selectedPlan && selectedPlanImpact ? `${dynamic.planActive} · ${money(selectedPlan.monthlyTarget)}/${dynamic.month} · ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(selectedPlanImpact.estimatedMonthsEarlier)} ${dynamic.earlier}${selectedCalculation && savingsCapacity?.available && isGoalContributionPlanStale(selectedPlan, selectedCalculation.requiredMonthlyContribution, savingsCapacity.safeMonthlyCapacity) ? ` · ${dynamic.review}` : ""}.` : !availability.savingsReady ? emptyCopy.unavailable : savingsCapacity?.available && savingsCapacity?.canContribute ? `${dynamic.found} ${money(savingsCapacity.safeMonthlyCapacity)}/${dynamic.month} ${dynamic.roomInBudget}` : dynamic.attention;
+  const capacityContextCopy = !availability.savingsReady ? emptyCopy.unavailable : savingsCapacity?.source === "active_adjustment" ? dynamic.adjustment : savingsCapacity?.available ? `${dynamic.headroom} ${money(savingsCapacity.rawCapacity)}; ${dynamic.buffer}` : dynamic.attention;
+  const impactCopy = !availability.savingsReady ? emptyCopy.unavailable : availableCapacity !== null && availableCapacity > 0 ? `${dynamic.directing} ≈ ${new Intl.NumberFormat(language === "pt" ? "pt-PT" : language === "es" ? "es-ES" : "en-IE", { maximumFractionDigits: 1 }).format(availableImpact?.estimatedMonthsEarlier ?? 0)} ${dynamic.earlier}.` : dynamic.noImpact;
   const nextBestActions = primaryGoal ? actionIcons.map((icon, index) => ({ text: [liveContributionCopy, capacityContextCopy, impactCopy][index], icon })) : [];
 
   async function createGoal(values: Omit<Goal, "id">) {
+    if (!availability.goalsReady) return;
     const goal = { ...values, id: crypto.randomUUID() };
     try {
       const confirmed = await upsertGoal(goal);
@@ -107,7 +131,7 @@ export default function GoalsPage() {
   }
 
   async function confirmDelete() {
-    if (!deleteGoalId) return;
+    if (!availability.goalsReady || !deleteGoalId) return;
     try {
       await deleteGoal(deleteGoalId);
       if (selectedGoalId === deleteGoalId) setSelectedGoalId(null);
@@ -118,13 +142,30 @@ export default function GoalsPage() {
   }
 
   async function applySavingsPlan() {
-    if (!savingsCapacity.available || !planGoal || !planCalculation || planCalculation.isCompleted || planCalculation.isPastDue || planCalculation.requiredMonthlyContribution === null || planCalculation.requiredMonthlyContribution <= 0 || savingsCapacity.safeMonthlyCapacity <= 0) return;
-    const monthlyTargetResult = calculateGoalPlanMonthlyTarget(planCalculation.requiredMonthlyContribution, savingsCapacity.safeMonthlyCapacity);
+    const liveMonth = getCurrentFinancialMonth();
+    const liveRange = financialMonthRange(liveMonth);
+    const livePeriod = getTransactionPeriodState(liveRange);
+    const liveResult = readyTransactionPeriod(livePeriod);
+    const latest = latestInputs.current;
+    // Reject an obsolete modal callback rather than submitting its old capacity.
+    if (liveMonth !== currentMonth || !liveResult || liveResult !== periodResult
+      || latest.goals !== goals || latest.budgets !== budgets || latest.budgetAdjustments !== budgetAdjustments
+      || latest.goalContributionPlans !== goalContributionPlans
+      || !getGoalsAvailability(latest.resourceStatuses, livePeriod).canApplyPlan) return;
+    requireCompletePeriodResult(liveResult, liveRange);
+    if (!availability.canApplyPlan || !savingsCapacity?.available || !planGoal || !planCalculation || planCalculation.isCompleted || planCalculation.isPastDue || planCalculation.requiredMonthlyContribution === null || planCalculation.requiredMonthlyContribution <= 0 || savingsCapacity.safeMonthlyCapacity <= 0) return;
+    const actionNow = new Date();
+    const actionCapacity = calculateGoalSavingsCapacity({ budgets: latest.budgets, transactions: [...liveResult.items], month: liveMonth, adjustment: latest.budgetAdjustments[liveMonth], now: actionNow });
+    const actionGoal = calculateGoal(planGoal, actionNow);
+    if (!actionCapacity.available || !actionGoal.available || actionGoal.isCompleted || actionGoal.isPastDue
+      || actionCapacity.safeMonthlyCapacity !== savingsCapacity.safeMonthlyCapacity
+      || actionGoal.requiredMonthlyContribution !== planCalculation.requiredMonthlyContribution) return;
+    const monthlyTargetResult = calculateGoalPlanMonthlyTarget(planCalculation.requiredMonthlyContribution, actionCapacity.safeMonthlyCapacity);
     if (!monthlyTargetResult.available) return;
     const monthlyTarget = monthlyTargetResult.value;
     if (!Number.isFinite(monthlyTarget) || monthlyTarget <= 0) return;
     try {
-      await upsertGoalContributionPlan({ goalId: planGoal.id, monthlyTarget, baselineRequiredMonthlyContribution: planCalculation.requiredMonthlyContribution, savingsBoost: savingsCapacity.safeMonthlyCapacity, createdAt: new Date().toISOString() });
+      await upsertGoalContributionPlan({ goalId: planGoal.id, monthlyTarget, baselineRequiredMonthlyContribution: planCalculation.requiredMonthlyContribution, savingsBoost: savingsCapacity.safeMonthlyCapacity, createdAt: new Date().toISOString() }, liveRange);
       setFeedback(`Savings plan applied · ${money(monthlyTarget)}/month target`);
       setPlanGoalId(null);
     } catch (error) {
@@ -132,40 +173,44 @@ export default function GoalsPage() {
     }
   }
   return (
-    <main className="min-h-screen overflow-hidden bg-[#080B0F] text-[#F5F7FA]">
-      <DesktopScaleCanvas>
-        <div className="relative h-[1024px] w-[1536px] overflow-hidden">
-          <DesktopInternalPagePanel className="flex items-center justify-center">
-            <div className="flex h-[779.67px] w-[1098px] shrink-0 flex-col gap-[12px]">
-              <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[520px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{t.title}</h1><p className="text-[13.2px] text-[#9CA6B2]">{t.description}</p></div><div className="flex h-[52px] w-[220px] items-center justify-end gap-[16px]"><button type="button" onClick={() => setModal({ mode: "create" })} className="h-[38px] w-[132px] rounded-[19px] bg-[#3B82F6] text-[12.5px] font-semibold">{t.newGoal}</button></div></header>
+    <div data-goals-page aria-busy={isHydrating}>
+      <div className="relative w-full min-w-0">
+        <div className="relative w-full min-w-0">
+          <section className="goals-panel w-full min-w-0">
+            <div className="goals-layout">
+              <div className="goals-brand"><Image src="/moneypilot/dashboard/day/logomark.svg" alt="" width={37} height={37} /><span>MoneyPilot</span></div>
+              <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[520px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{t.title}</h1><p className="text-[13.2px] text-[#9CA6B2]">{t.description}</p></div><div className="flex h-[52px] w-[220px] items-center justify-end gap-[16px]"><button type="button" disabled={!availability.goalsReady} onClick={() => setModal({ mode: "create" })} className="h-[38px] w-[132px] rounded-[19px] bg-[#3B82F6] text-[12.5px] font-semibold">{t.newGoal}</button><AccountAvatar size={52} /></div></header>
+              {availability.hasError && <p className="goals-system-state" role="alert">{ui.error}</p>}
+              {!availability.goalsReady ? <div className="goals-loading" role={resourceStatuses.goals.status === "loading" ? "status" : "alert"}>{resourceStatuses.goals.status === "loading" ? ui.loading : ui.error}</div> : <>
 
               <section aria-label={t.summaryAria} className="flex h-[115px] shrink-0 gap-[12px]">{goalSummaryMetrics.map((metric) => <article key={metric.label} className={`${cardClass} flex h-[115px] w-[265.5px] shrink-0 flex-col gap-[6px] p-[12px]`}><div className="flex h-[24px] items-center gap-[8px] text-[11.5px] font-medium text-[#9CA6B2]"><Image src={`${iconRoot}/${metric.icon}`} alt="" width={24} height={24} className="size-[24px]" />{metric.label}</div><strong className="truncate text-[20px] font-semibold leading-none">{metric.value}</strong><span className="truncate text-[10.5px] text-[#9CA6B2]">{metric.detail}</span>{metric.progress && <div className="h-[5px] w-[241.5px] rounded-[2.5px] bg-[#28313B]/90"><div className="h-[5px] rounded-[2.5px] bg-[#22C55E]" style={{ width: `${primaryCalculation?.visualProgressPercent ?? 0}%` }} /></div>}</article>)}</section>
 
               <section className="flex h-[210px] shrink-0 gap-[12px]">
                 <article className={`${cardClass} flex h-[210px] w-[677px] shrink-0 flex-col items-center justify-between p-[14px]`}>
-                  <div className="flex h-[28px] w-[649px] items-center justify-between"><div className="flex items-center gap-[10px]"><h2 className="text-[16px] font-semibold">{t.yourGoal}</h2>{goals.length > 1 && <select aria-label="Select goal" value={selectedGoal?.id ?? ""} onChange={(event) => setSelectedGoalId(event.target.value)} className="h-[26px] max-w-[210px] rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 px-[10px] text-[10.5px] text-[#9CA6B2]">{goals.map((goal) => <option key={goal.id} value={goal.id}>{goal.name}</option>)}</select>}</div>{selectedGoal && <button type="button" onClick={() => setModal({ mode: "edit", goalId: selectedGoal.id })} className="flex h-[26px] w-[116px] items-center justify-center gap-[5px] rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 text-[10.5px] font-medium text-[#9CA6B2]">{t.editGoal}<Image src={`${iconRoot}/pencil-alt.svg`} alt="" width={19.33} height={19.33} className="size-[19.33px]" /></button>}</div>
-                  {selectedGoal && selectedCalculation ? <><div className="flex h-[126px] w-[649px] items-center gap-[14px]"><Image src="/moneypilot/goal-italy-rome.png" alt={t.tripImageAlt} width={140} height={112} className="h-[112px] w-[140px] rounded-[14px] object-cover" /><div className="flex h-[126px] w-[495px] flex-col justify-center gap-[7px]"><h3 className="truncate text-[16px] font-semibold">{selectedGoal.name}</h3><div className="flex h-[26px] gap-[8px]"><span className="flex h-[26px] items-center rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 px-[16px] text-[10.5px] font-medium capitalize text-[#9CA6B2]">{selectedGoal.priority}</span><span className="flex h-[26px] items-center rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 px-[16px] text-[10.5px] font-medium text-[#9CA6B2]">{money(selectedGoal.targetAmount)}</span></div><div className="flex h-[16px] w-[440px] items-center justify-between text-[10.5px] font-medium text-[#9CA6B2]"><span>{t.goalProgress}</span><strong className="text-[#22C55E]">{percentage(selectedCalculation.progressRatio)}</strong></div><div className="h-[8px] w-[440px] rounded-[4px] bg-[#28313B]/90"><div className="h-[8px] rounded-[4px] bg-[#3B82F6]" style={{ width: `${selectedCalculation.progressPercent}%` }} /></div><div className="flex h-[18px] w-[440px] items-center justify-between text-[11px]"><strong>{money(selectedGoal.savedAmount)} {dynamic.of} {money(selectedGoal.targetAmount)}</strong><span className="text-[#9CA6B2]">{money(selectedCalculation.remainingAmount)} {dynamic.remaining} · {contributionValue(selectedCalculation)}</span></div></div></div><div className="flex h-[30px] w-[649px] items-center justify-between"><div className="flex h-[28px] w-[220px] items-start gap-[7px]"><Image src={`${iconRoot}/next-action.svg`} alt="" width={8} height={28} className="h-[28px] w-[8px] shrink-0" /><div className="flex flex-col gap-[2px]"><span className="text-[9.5px] leading-none text-[#9CA6B2]">{t.goalDate}</span><strong className="text-[11px] leading-none">{formatGoalTargetDate(selectedGoal.targetDate, language)}</strong></div></div><span className="flex h-[24px] w-[104px] items-center justify-center rounded-[14px] bg-[#3B82F6] text-[10.5px] font-semibold">{selectedCalculation.isCompleted ? dynamic.completed : selectedCalculation.isPastDue ? dynamic.pastDue : selectedCalculation.isDueThisMonth ? dynamic.dueMonth : dynamic.active}</span></div></> : <div className="flex h-[160px] w-[649px] flex-col items-center justify-center gap-[10px] text-center"><strong className="text-[16px]">{dynamic.noGoals}</strong><span className="text-[10.5px] text-[#9CA6B2]">{dynamic.createTracking}</span><button type="button" onClick={() => setModal({ mode: "create" })} className="h-[32px] rounded-[16px] bg-[#3B82F6] px-[20px] text-[11px] font-semibold">{t.newGoal}</button></div>}
+                  <div className="flex h-[28px] w-[649px] items-center justify-between"><div className="flex items-center gap-[10px]"><h2 className="text-[16px] font-semibold">{t.yourGoal}</h2>{goals.length > 1 && <select aria-label={ui.select} value={selectedGoal?.id ?? ""} onChange={(event) => setSelectedGoalId(event.target.value)} className="h-[26px] max-w-[210px] rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 px-[10px] text-[10.5px] text-[#9CA6B2]">{goals.map((goal) => <option key={goal.id} value={goal.id}>{goal.name}</option>)}</select>}</div>{selectedGoal && <button type="button" onClick={() => setModal({ mode: "edit", goalId: selectedGoal.id })} className="flex h-[26px] w-[116px] items-center justify-center gap-[5px] rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 text-[10.5px] font-medium text-[#9CA6B2]">{t.editGoal}<Image src={`${iconRoot}/pencil-alt.svg`} alt="" width={19.33} height={19.33} className="size-[19.33px]" /></button>}</div>
+                  {selectedGoal && selectedCalculation ? <><div className="goals-overview"><Image src="/moneypilot/goal-italy-rome.png" alt={t.tripImageAlt} width={140} height={112} className="h-[112px] w-[140px] rounded-[14px] object-cover" /><div className="goals-details"><h3 className="truncate text-[16px] font-semibold">{selectedGoal.name}</h3><div className="flex h-[26px] gap-[8px]"><span className="flex h-[26px] items-center rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 px-[16px] text-[10.5px] font-medium capitalize text-[#9CA6B2]">{ui[selectedGoal.priority]}</span><span className="flex h-[26px] items-center rounded-[14px] border border-[#28313B] bg-[#1A2129]/78 px-[16px] text-[10.5px] font-medium text-[#9CA6B2]">{money(selectedGoal.targetAmount)}</span></div><div className="flex h-[16px] w-[440px] items-center justify-between text-[10.5px] font-medium text-[#9CA6B2]"><span>{t.goalProgress}</span><strong className="text-[#22C55E]">{percentage(selectedCalculation.progressRatio)}</strong></div><div className="h-[8px] w-[440px] rounded-[4px] bg-[#28313B]/90"><div className="h-[8px] rounded-[4px] bg-[#3B82F6]" style={{ width: `${selectedCalculation.progressPercent}%` }} /></div><div className="flex h-[18px] w-[440px] items-center justify-between text-[11px]"><strong>{money(selectedGoal.savedAmount)} {dynamic.of} {money(selectedGoal.targetAmount)}</strong><span className="text-[#9CA6B2]">{money(selectedCalculation.remainingAmount)} {dynamic.remaining} · {contributionValue(selectedCalculation)}</span></div></div></div><div className="flex h-[30px] w-[649px] items-center justify-between"><div className="flex h-[28px] w-[220px] items-start gap-[7px]"><Image src={`${iconRoot}/next-action.svg`} alt="" width={8} height={28} className="h-[28px] w-[8px] shrink-0" /><div className="flex flex-col gap-[2px]"><span className="text-[9.5px] leading-none text-[#9CA6B2]">{t.goalDate}</span><strong className="text-[11px] leading-none">{formatGoalTargetDate(selectedGoal.targetDate, language)}</strong></div></div><span className="flex h-[24px] w-[104px] items-center justify-center rounded-[14px] bg-[#3B82F6] text-[10.5px] font-semibold">{selectedCalculation.isCompleted ? dynamic.completed : selectedCalculation.isPastDue ? dynamic.pastDue : selectedCalculation.isDueThisMonth ? dynamic.dueMonth : dynamic.active}</span></div></> : <div className="flex h-[160px] w-[649px] flex-col items-center justify-center gap-[10px] text-center"><strong className="text-[16px]">{dynamic.noGoals}</strong><span className="text-[10.5px] text-[#9CA6B2]">{dynamic.createTracking}</span><button type="button" disabled={!availability.goalsReady} onClick={() => setModal({ mode: "create" })} className="h-[32px] rounded-[16px] bg-[#3B82F6] px-[20px] text-[11px] font-semibold">{t.newGoal}</button></div>}
                 </article>
 
-                <article className={`${cardClass} flex h-[210px] w-[409px] shrink-0 flex-col gap-[7px] p-[14px]`}><h2 className="flex h-[24px] items-center gap-[8px] text-[15.5px] font-semibold"><Image src={`${iconRoot}/action-cta.svg`} alt="" width={23} height={24} className="h-[24px] w-[23px]" />{t.nextBestAction}</h2>{primaryGoal ? <>{nextBestActions.map((item) => <div key={`${item.icon}-${item.text}`} className="flex h-[34px] w-[381px] items-center gap-[9px]"><Image src={`${iconRoot}/${item.icon}`} alt="" width={24} height={24} className="size-[24px]" /><p className="text-[10.2px] leading-[14px] text-[#9CA6B2]">{item.text}</p></div>)}<button type="button" disabled={!selectedGoal || !selectedCalculation || selectedCalculation.isCompleted || selectedCalculation.isPastDue || selectedCalculation.requiredMonthlyContribution === null || !savingsCapacity.canContribute} onClick={() => selectedGoal && setPlanGoalId(selectedGoal.id)} className="flex h-[30px] w-[381px] items-center justify-center gap-[6px] rounded-[10px] bg-[#3B82F6] text-[10.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-45"><span className="size-[5px] rounded-full bg-white" />{selectedPlan ? dynamic.reviewPlan : savingsCapacity.canContribute ? `${dynamic.apply} ${money(savingsCapacity.safeMonthlyCapacity)}/${dynamic.month}` : dynamic.noCapacityButton}</button></> : <div className="flex flex-1 flex-col items-center justify-center gap-[12px] text-center"><strong className="text-[16px]">{emptyCopy.createFirst}</strong><p className="max-w-[330px] text-[10.2px] leading-[14px] text-[#9CA6B2]">{emptyCopy.chooseGoal}</p><button type="button" onClick={() => setModal({ mode: "create" })} className="h-[30px] rounded-[15px] bg-[#3B82F6] px-[24px] text-[10.5px] font-semibold">{t.newGoal}</button></div>}</article>
+                <article className={`${cardClass} flex h-[210px] w-[409px] shrink-0 flex-col gap-[7px] p-[14px]`}><h2 className="flex h-[24px] items-center gap-[8px] text-[15.5px] font-semibold"><Image src={`${iconRoot}/action-cta.svg`} alt="" width={23} height={24} className="h-[24px] w-[23px]" />{t.nextBestAction}</h2>{primaryGoal ? <>{nextBestActions.map((item) => <div key={`${item.icon}-${item.text}`} className="flex h-[34px] w-[381px] items-center gap-[9px]"><Image src={`${iconRoot}/${item.icon}`} alt="" width={24} height={24} className="size-[24px]" /><p className="text-[10.2px] leading-[14px] text-[#9CA6B2]">{item.text}</p></div>)}<button type="button" disabled={!availability.canApplyPlan || !selectedGoal || !selectedCalculation || selectedCalculation.isCompleted || selectedCalculation.isPastDue || selectedCalculation.requiredMonthlyContribution === null || !savingsCapacity?.canContribute} onClick={() => selectedGoal && setPlanGoalId(selectedGoal.id)} className="flex h-[30px] w-[381px] items-center justify-center gap-[6px] rounded-[10px] bg-[#3B82F6] text-[10.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-45"><span className="size-[5px] rounded-full bg-white" />{!availability.canApplyPlan ? emptyCopy.unavailable : selectedPlan ? dynamic.reviewPlan : savingsCapacity?.canContribute ? `${dynamic.apply} ${money(savingsCapacity.safeMonthlyCapacity)}/${dynamic.month}` : dynamic.noCapacityButton}</button></> : <div className="flex flex-1 flex-col items-center justify-center gap-[12px] text-center"><strong className="text-[16px]">{emptyCopy.createFirst}</strong><p className="max-w-[330px] text-[10.2px] leading-[14px] text-[#9CA6B2]">{emptyCopy.chooseGoal}</p><button type="button" disabled={!availability.goalsReady} onClick={() => setModal({ mode: "create" })} className="h-[30px] rounded-[15px] bg-[#3B82F6] px-[24px] text-[10.5px] font-semibold">{t.newGoal}</button></div>}</article>
               </section>
 
               <section className="flex h-[222px] shrink-0 gap-[12px]">
-                <article className={`${cardClass} flex h-[222px] w-[677px] shrink-0 flex-col p-[14px]`}><h2 className="h-[20px] text-[15.5px] font-semibold">{emptyCopy.savingsPlan}</h2><div className="flex flex-1 flex-col items-center justify-center gap-[10px] text-center"><strong className="text-[15px]">{emptyCopy.unavailable}</strong><p className="text-[10.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.planUnavailable : emptyCopy.createForSavings}</p></div></article>
+                <article className={`${cardClass} flex h-[222px] w-[677px] shrink-0 flex-col p-[14px]`}><h2 className="h-[20px] text-[15.5px] font-semibold">{ui.plan}</h2><div className="flex flex-1 flex-col items-center justify-center gap-[10px] text-center"><strong className="text-[15px]">{emptyCopy.unavailable}</strong><p className="text-[10.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.planUnavailable : emptyCopy.createForSavings}</p></div></article>
 
                 <article className={`${cardClass} flex h-[222px] w-[409px] shrink-0 flex-col gap-[10px] p-[14px]`}><h2 className="h-[20px] text-[15px] font-semibold">{emptyCopy.estimatedCost}</h2>{selectedGoal && selectedCalculation ? <dl className="mt-[14px] grid gap-[10px] rounded-[12px] border border-[#28313B] bg-[#1A2129]/45 p-[14px] text-[10.5px]"><div className="flex justify-between"><dt className="text-[#9CA6B2]">{emptyCopy.target}</dt><dd className="font-semibold">{money(selectedGoal.targetAmount)}</dd></div><div className="flex justify-between"><dt className="text-[#9CA6B2]">{emptyCopy.saved}</dt><dd className="font-semibold">{money(selectedGoal.savedAmount)}</dd></div><div className="flex justify-between"><dt className="text-[#9CA6B2]">{emptyCopy.remaining}</dt><dd className="font-semibold">{money(selectedCalculation.remainingAmount)}</dd></div></dl> : <div className="flex flex-1 flex-col items-center justify-center gap-[10px] text-center"><strong className="text-[15px]">{emptyCopy.unavailable}</strong><p className="text-[10.5px] text-[#9CA6B2]">{emptyCopy.addTarget}</p></div>}</article>
               </section>
 
-              <section className={`${cardClass} flex h-[78px] w-[1098px] shrink-0 items-center gap-[18px] p-[12px]`}><div className="flex h-[54px] w-[160px] shrink-0 flex-col justify-center gap-[4px]"><h2 className="text-[14.5px] font-semibold">{emptyCopy.actionPlan}</h2><p className="text-[9.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.unavailable : emptyCopy.noActionPlan}</p></div><p className="flex-1 text-[10.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.actionsUnavailable : emptyCopy.createForActions}</p>{!primaryGoal && <button type="button" onClick={() => setModal({ mode: "create" })} className="h-[30px] rounded-[15px] bg-[#3B82F6] px-[24px] text-[10.5px] font-semibold">{t.newGoal}</button>}</section>
+              <section className={`${cardClass} flex h-[78px] w-[1098px] shrink-0 items-center gap-[18px] p-[12px]`}><div className="flex h-[54px] w-[160px] shrink-0 flex-col justify-center gap-[4px]"><h2 className="text-[14.5px] font-semibold">{emptyCopy.actionPlan}</h2><p className="text-[9.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.unavailable : emptyCopy.noActionPlan}</p></div><p className="flex-1 text-[10.5px] text-[#9CA6B2]">{primaryGoal ? emptyCopy.actionsUnavailable : emptyCopy.createForActions}</p>{!primaryGoal && <button type="button" disabled={!availability.goalsReady} onClick={() => setModal({ mode: "create" })} className="h-[30px] rounded-[15px] bg-[#3B82F6] px-[24px] text-[10.5px] font-semibold">{t.newGoal}</button>}</section>
+              </>}
             </div>
-          </DesktopInternalPagePanel>
+          </section>
         </div>
-      </DesktopScaleCanvas>
-      {modal?.mode === "create" && <GoalModal mode="create" goals={goals} onClose={() => setModal(null)} onSubmit={createGoal} />}
-      {modal?.mode === "edit" && editedGoal && <GoalModal mode="edit" goal={editedGoal} goals={goals} onClose={() => setModal(null)} onSubmit={editGoal} onRequestDelete={() => { setDeleteGoalId(editedGoal.id); setModal(null); }} />}
-      {goalToDelete && <DeleteGoalModal goal={goalToDelete} language={language} onClose={() => setDeleteGoalId(null)} onConfirm={confirmDelete} />}
-      {planGoal && planCalculation && savingsCapacity.available && <GoalSavingsPlanModal goal={planGoal} calculation={planCalculation} savingsBoost={savingsCapacity.safeMonthlyCapacity} existingPlan={goalContributionPlans[planGoal.id]} language={language} onClose={() => setPlanGoalId(null)} onApply={applySavingsPlan} />}
+      </div>
+      {availability.goalsReady && modal?.mode === "create" && <GoalsModalLayer><GoalModal mode="create" goals={goals} onClose={() => setModal(null)} onSubmit={createGoal} /></GoalsModalLayer>}
+      {modal?.mode === "edit" && editedGoal && <GoalsModalLayer><GoalModal mode="edit" goal={editedGoal} goals={goals} onClose={() => setModal(null)} onSubmit={editGoal} onRequestDelete={() => { setDeleteGoalId(editedGoal.id); setModal(null); }} /></GoalsModalLayer>}
+      {goalToDelete && <GoalsModalLayer><DeleteGoalModal goal={goalToDelete} language={language} onClose={() => setDeleteGoalId(null)} onConfirm={confirmDelete} /></GoalsModalLayer>}
+      {availability.canApplyPlan && planGoal && planCalculation && savingsCapacity?.available && <GoalsModalLayer><GoalSavingsPlanModal goal={planGoal} calculation={planCalculation} savingsBoost={savingsCapacity.safeMonthlyCapacity} existingPlan={goalContributionPlans[planGoal.id]} language={language} onClose={() => setPlanGoalId(null)} onApply={applySavingsPlan} /></GoalsModalLayer>}
       {feedback && <div role="status" className="fixed bottom-[28px] left-1/2 z-[70] -translate-x-1/2 rounded-[18px] border border-[#22C55E]/30 bg-[var(--background-elevated)] px-[22px] py-[10px] text-[10px] font-semibold text-[#22C55E] shadow-lg">{feedback}</div>}
-    </main>
+    </div>
   );
 }

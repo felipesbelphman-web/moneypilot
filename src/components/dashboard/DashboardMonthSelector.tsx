@@ -1,9 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronDown, ChevronLeft, ChevronRight, CornerUpLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Language } from "@/components/LanguageProvider";
+
+
+const periodCopy: Record<Language, readonly [string, string, string]> = {
+  en: ["Today", "Month", "Date"], pt: ["Hoje", "Mês", "Data"],
+  es: ["Hoy", "Mes", "Fecha"], de: ["Heute", "Monat", "Datum"],
+  fr: ["Aujourd’hui", "Mois", "Date"], nl: ["Vandaag", "Maand", "Datum"],
+  it: ["Oggi", "Mese", "Data"],
+};
 
 type MonthSelectorCopy = {
   current: string;
@@ -33,9 +41,11 @@ type DashboardMonthSelectorProps = {
   currentMonth: string;
   transactionDates: string[];
   onMonthChange: (month: string) => void;
+  onOpenCalendar?: () => void;
 };
 
-export function DashboardMonthSelector({ language, month, currentMonth, transactionDates, onMonthChange }: DashboardMonthSelectorProps) {
+export function DashboardMonthSelector({ language, month, currentMonth, transactionDates, onMonthChange, onOpenCalendar }: DashboardMonthSelectorProps) {
+
   const [isOpen, setIsOpen] = useState(false);
   const [visibleYear, setVisibleYear] = useState(() => Number(month.slice(0, 4)));
   const rootRef = useRef<HTMLDivElement>(null);
@@ -43,7 +53,7 @@ export function DashboardMonthSelector({ language, month, currentMonth, transact
   const selectedMonthRef = useRef<HTMLButtonElement>(null);
   const copy = copyByLanguage[language];
   const locale = localeByLanguage[language];
-  const isCurrentMonth = month === currentMonth;
+
   const transactionMonths = useMemo(
     () => new Set(transactionDates.map((date) => date.match(/^\d{4}-(0[1-9]|1[0-2])-/)?.[0].slice(0, 7)).filter((value): value is string => Boolean(value))),
     [transactionDates],
@@ -63,6 +73,8 @@ export function DashboardMonthSelector({ language, month, currentMonth, transact
     setVisibleYear(Number(month.slice(0, 4)));
     setIsOpen(true);
   };
+
+  const openCalendar = () => { setIsOpen(false); onOpenCalendar?.(); };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -87,31 +99,14 @@ export function DashboardMonthSelector({ language, month, currentMonth, transact
 
   return (
     <div ref={rootRef} className="relative z-40 shrink-0">
-      <div className="flex items-center gap-[12px] rounded-[25px] bg-[var(--dashboard-brand-accent)] py-[2px] pl-[2px] pr-[12px]">
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-haspopup="dialog"
-          aria-expanded={isOpen}
-          aria-label={`${copy.selectMonth}: ${formatMonth(month, "long")}`}
-          onClick={toggleMonthSelector}
-          className="flex h-[42px] w-[130px] items-center justify-between rounded-[24px] bg-gradient-to-l from-[#3B3B3E] to-[#252526] px-[10px] text-[12.55px] font-semibold text-white"
-        >
-          <Image src="/moneypilot/dashboard-controls/calendar.svg" alt="" width={24} height={24} className="size-[24px] shrink-0" />
-          <span className="min-w-0 truncate capitalize">{formatMonth(month)}</span>
-          <ChevronDown aria-hidden="true" className={`size-[15px] shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} strokeWidth={2} />
-        </button>
 
-        <button
-          type="button"
-          disabled={isCurrentMonth}
-          onClick={() => onMonthChange(currentMonth)}
-          className="flex items-center gap-[6px] whitespace-nowrap text-[12.55px] font-medium text-white transition-opacity disabled:cursor-default disabled:opacity-45"
-        >
-          <CornerUpLeft aria-hidden="true" className="size-[16px]" strokeWidth={2} />
-          {copy.current}
-        </button>
-      </div>
+        <div className="dashboard-period-controls">
+          <button type="button" title={`${copy.current}: ${formatMonth(currentMonth, "long")}`} onClick={() => onMonthChange(currentMonth)}>{periodCopy[language][0]}</button>
+          <button ref={triggerRef} type="button" aria-haspopup={onOpenCalendar ? undefined : "dialog"} aria-expanded={onOpenCalendar ? undefined : isOpen} aria-label={`${periodCopy[language][1]}: ${formatMonth(month, "long")}`} title={formatMonth(month, "long")} onClick={onOpenCalendar ? openCalendar : toggleMonthSelector} className="dashboard-period-controls__selected">{periodCopy[language][1]} · {formatMonth(month)}</button>
+          <button type="button" aria-haspopup="dialog" aria-expanded={isOpen} aria-label={`${periodCopy[language][2]}: ${formatMonth(month, "long")}`} onClick={toggleMonthSelector}>
+            <Image src="/moneypilot/dashboard-controls/calendar.svg" alt="" width={23} height={23} />{periodCopy[language][2]}
+          </button>
+        </div>
 
       {isOpen && (
         <div role="dialog" aria-label={copy.selectMonth} className="absolute right-0 top-[52px] z-50 w-[270px] rounded-[20px] border border-[var(--dashboard-brand-border)] bg-[#17181B] p-[14px] text-white shadow-[0_18px_40px_rgba(0,0,0,0.45)]">

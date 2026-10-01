@@ -19,9 +19,10 @@ type FinancialTab = "balance" | "income" | "expense";
 type FinancialView = "bars" | "donut" | "trend";
 
 type FinancialFlowProps =
-    | { demo: true }
+    | { demo: true; title?: string }
     | {
           demo?: false;
+          title?: string;
           month: string;
           aggregationAvailable: boolean;
           categoryAggregationAvailable: boolean;
@@ -37,8 +38,8 @@ type FinancialFlowProps =
 
 const dates = [15, 16, 17, 18, 19, 20, 21];
 const demoTrendDates = dates.map((day) => `2026-08-${String(day).padStart(2, "0")}`);
-const categoryColors = ["#F43F5E", "#E11D48", "#FB7185", "#BE123C", "#FDA4AF"];
-const incomeCategoryColors = ["#22C55E", "#16A34A", "#4ADE80", "#15803D", "#86EFAC"];
+const categoryColors = ["var(--dashboard-expense, #F43F5E)", "#E11D48", "#FB7185", "#BE123C", "#FDA4AF"];
+const incomeCategoryColors = ["var(--dashboard-income, #22C55E)", "#16A34A", "#4ADE80", "#15803D", "#86EFAC"];
 
 const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value: number) => string) => ({
     balance: {
@@ -51,14 +52,14 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
             {
                 label: t.income,
                 value: money(3650),
-                color: "#22C55E",
-                dot: "#22C55E",
+                color: "var(--dashboard-income, #22C55E)",
+                dot: "var(--dashboard-income, #22C55E)",
             },
             {
                 label: t.expenses,
                 value: money(2180.5),
-                color: "#F43F5E",
-                dot: "#F43F5E",
+                color: "var(--dashboard-expense, #F43F5E)",
+                dot: "var(--dashboard-expense, #F43F5E)",
             },
             {
                 label: t.labels.accountBalance,
@@ -132,7 +133,7 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
     },
 
     income: {
-        accent: "#22C55E",
+        accent: "var(--dashboard-income, #22C55E)",
         secondary: "#14532D",
         glow: "rgba(34,197,94,0.34)",
         soft: "rgba(34,197,94,0.08)",
@@ -141,8 +142,8 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
             {
                 label: t.income,
                 value: money(3650),
-                color: "#22C55E",
-                dot: "#22C55E",
+                color: "var(--dashboard-income, #22C55E)",
+                dot: "var(--dashboard-income, #22C55E)",
             },
             {
                 label: t.averagePerDay,
@@ -154,7 +155,7 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
                 label: t.labels.largestIncome,
                 value: money(920),
                 color: "var(--text-primary)",
-                dot: "#22C55E",
+                dot: "var(--dashboard-income, #22C55E)",
             },
         ],
 
@@ -180,7 +181,7 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
                 label: t.salary,
                 value: money(2044),
                 percent: 56,
-                color: "#22C55E",
+                color: "var(--dashboard-income, #22C55E)",
             },
             {
                 label: t.labels.freelanceProjects,
@@ -222,7 +223,7 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
     },
 
     expense: {
-        accent: "#F43F5E",
+        accent: "var(--dashboard-expense, #F43F5E)",
         secondary: "#9F1239",
         glow: "rgba(244,63,94,0.34)",
         soft: "rgba(244,63,94,0.08)",
@@ -231,8 +232,8 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
             {
                 label: t.expenses,
                 value: money(2180.5),
-                color: "#F43F5E",
-                dot: "#F43F5E",
+                color: "var(--dashboard-expense, #F43F5E)",
+                dot: "var(--dashboard-expense, #F43F5E)",
             },
             {
                 label: t.labels.largestCategory,
@@ -244,7 +245,7 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
                 label: t.labels.categories,
                 value: "5",
                 color: "#F5F7FA",
-                dot: "#F43F5E",
+                dot: "var(--dashboard-expense, #F43F5E)",
             },
         ],
 
@@ -270,7 +271,7 @@ const getFinancialFlowData = (t: AppTranslation["financialFlow"], money: (value:
                 label: t.labels.housing,
                 value: money(784.98),
                 percent: 36,
-                color: "#F43F5E",
+                color: "var(--dashboard-expense, #F43F5E)",
             },
             {
                 label: t.food,
@@ -672,12 +673,12 @@ export function FinancialFlow(props: FinancialFlowProps) {
                     </div>
 
                     <h2 className="text-[21px] font-bold leading-none text-[var(--text-primary)]">
-                        {t.title}
+                        {props.title ?? t.title}
                     </h2>
                 </div>
 
                 {/* SALDO / RECEITAS / DESPESAS */}
-                <div className="flex h-[27px] w-[272px] items-center justify-center gap-[24px] rounded-full border border-[var(--financial-flow-tab-border)] bg-[var(--financial-flow-tab-surface)] py-[10px] pl-[2px] pr-[12px]">
+                <div data-financial-flow-tabs className="flex h-[27px] w-[272px] items-center justify-center gap-[24px] rounded-full border border-[var(--financial-flow-tab-border)] bg-[var(--financial-flow-tab-surface)] py-[10px] pl-[2px] pr-[12px]">
                     {[
                         {
                             id: "balance" as FinancialTab,
@@ -699,8 +700,8 @@ export function FinancialFlow(props: FinancialFlowProps) {
                             tab.id === "balance"
                                 ? "var(--dashboard-chart-primary)"
                                 : tab.id === "income"
-                                  ? "#22C55E"
-                                  : "#F43F5E";
+                                  ? "var(--dashboard-income, #22C55E)"
+                                  : "var(--dashboard-expense, #F43F5E)";
 
                         return (
                             <button

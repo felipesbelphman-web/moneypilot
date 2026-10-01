@@ -74,9 +74,56 @@ test("normalizes positive, negative and zero monetary results", () => {
   assert.equal(calculateCurrentBalance({ ...settings, openingBalance: 0 }, [transaction({ amount: 0.1 }), transaction({ id: "expense", type: "expense", amount: 0.1 })]), 0);
 });
 
-test("preserves four decimals and rounds only the final accumulated value", () => {
-  const transactions = Array.from({ length: 10 }, (_, index) => transaction({ id: String(index), amount: 0.00006 }));
-  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: 0.1234 }, transactions), 0.124);
+test("preserves four-decimal operands without per-item rounding", () => {
+  const transactions = Array.from({ length: 10 }, (_, index) => transaction({ id: String(index), amount: 0.0001 }));
+  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: 0.1234 }, transactions), 0.1244);
+});
+
+test("adds ten thousand small transactions to a large opening balance exactly", () => {
+  const transactions = Array.from({ length: 10_000 }, (_, index) => transaction({ id: String(index), amount: 0.0001 }));
+  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: 800000000000 }, transactions), 800000000001);
+});
+
+test("preserves supported boundaries and returns unavailable for positive or negative overflow", () => {
+  const maximum = 900719925474.0991;
+  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: maximum }, []), maximum);
+  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: -maximum }, []), -maximum);
+  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: maximum }, [transaction({ amount: 0.0001 })]), null);
+  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: -maximum }, [transaction({ type: "expense", amount: 0.0001 })]), null);
+});
+
+test("cancellation remains exact and independent of intermediate overflow and transaction order", () => {
+  const maximum = 900719925474.0991;
+  const transactions = [transaction({ amount: maximum }), transaction({ type: "expense", amount: maximum })];
+  const opening = { ...settings, openingBalance: maximum };
+  assert.equal(calculateCurrentBalance(opening, transactions), maximum);
+  assert.equal(calculateCurrentBalance(opening, [...transactions].reverse()), maximum);
+  assert.equal(calculateCurrentBalance({ ...settings, openingBalance: -maximum }, [transaction({ amount: maximum })]), 0);
+});
+
+test("invalid monetary operands make the whole balance unavailable instead of rounding or returning zero", () => {
+  for (const amount of [NaN, Infinity, -Infinity, 0.00006, 900719925474.0992, 0, -1]) {
+    for (const type of ["income", "expense"] as const) {
+      assert.equal(calculateCurrentBalance(settings, [transaction({ amount: 25 }), transaction({ type, amount })]), null);
+    }
+  }
+  for (const openingBalance of [NaN, Infinity, -Infinity, 0.00006, 900719925474.0992]) {
+    assert.equal(calculateCurrentBalance({ ...settings, openingBalance }, []), null);
+  }
+  assert.equal(calculateCurrentBalance(settings, [transaction({ type: "invalid" as Transaction["type"] })]), null);
+});
+
+test("the provider-facing balance contract preserves unavailability and legitimate zero", () => {
+  const overflow = { ...settings, openingBalance: 900719925474.0991 };
+  assert.equal(calculateCompleteCurrentBalance(overflow, [transaction({ amount: 0.0001 })], true), null);
+  assert.equal(calculateCompleteCurrentBalance(settings, [transaction({ amount: NaN })], true), null);
+  assert.equal(calculateCompleteCurrentBalance(null, [], true), null);
+  assert.equal(calculateCompleteCurrentBalance(settings, [], false), null);
+  assert.equal(calculateCompleteCurrentBalance({ ...settings, openingBalance: 0 }, [], true), 0);
+});
+
+test("excluded transactions do not affect balance operand availability", () => {
+  assert.equal(calculateCurrentBalance(settings, [transaction({ dateISO: "2026-08-31", amount: NaN })]), 100);
 });
 
 test("ignores transactions before the opening date", () => {

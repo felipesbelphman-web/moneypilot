@@ -55,15 +55,36 @@ test("does not allow a partial page to be used as a complete financial period", 
     total: 100,
     pagination: createOffsetPagination(1, 2),
   };
-  assert.throws(() => requireCompletePeriodResult(page), (error) => error instanceof FinanceError
+  assert.throws(() => requireCompletePeriodResult(page, { startISO: "2026-09-01", endExclusiveISO: "2026-10-01" }), (error) => error instanceof FinanceError
     && error.code === "validation_error" && error.details?.field === "completeness");
 });
 
 test("accepts only explicitly complete period data for totals", () => {
   const complete: FinancialQueryResult<number> = {
     completeness: "complete",
-    range: { fromISO: "2026-09-01", toISO: "2026-09-30" },
+    range: { startISO: "2026-09-01", endExclusiveISO: "2026-10-01" },
     items: [10, 20],
   };
-  assert.equal(requireCompletePeriodResult(complete), complete);
+  assert.equal(requireCompletePeriodResult(complete, complete.range), complete);
+});
+
+for (const items of [[], [10]]) {
+  test(`rejects wrong period even with ${items.length} complete items`, () => {
+    const complete: FinancialQueryResult<number> = { completeness: "complete", range: { startISO: "2026-09-01", endExclusiveISO: "2026-10-01" }, items };
+    for (const expected of [
+      { startISO: "2026-08-01", endExclusiveISO: "2026-09-01" },
+      { startISO: "2026-09-01", endExclusiveISO: "2026-11-01" },
+      { startISO: "2026-08-01", endExclusiveISO: "2026-10-01" },
+    ]) assert.throws(() => requireCompletePeriodResult(complete, expected), FinanceError);
+    assert.equal(requireCompletePeriodResult(complete, complete.range), complete);
+  });
+}
+
+test("expected scope is mandatory at compile time and runtime", () => {
+  const complete: FinancialQueryResult<number> = { completeness: "complete", range: { startISO: "2026-09-01", endExclusiveISO: "2026-10-01" }, items: [] };
+  assert.throws(() => {
+    // @ts-expect-error Missing expected scope must not compile.
+    requireCompletePeriodResult(complete);
+  }, FinanceError);
+  assert.throws(() => requireCompletePeriodResult({ ...complete, range: { startISO: "2026-02-30", endExclusiveISO: "2026-03-01" } }, complete.range), FinanceError);
 });

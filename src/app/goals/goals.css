@@ -1,0 +1,127 @@
+/* Figma Goals Day/Night. Shared shell geometry and navigation remain unchanged. */
+:root:has([data-goals-page]) {
+  --goals-app: #f3f3f3; --goals-main: #fff; --goals-card: #fff;
+  --goals-border: #dadada; --goals-outer: #dadada; --goals-divider: #ededed;
+  --goals-control: #f0f0f0; --goals-text: #1a1a1a; --goals-secondary: #616161; --goals-tertiary: #767676;
+  --goals-blue: #348dfc; --goals-link: #1f5fbf; --goals-purple: #9b5cff; --goals-purple-text: #7140bb;
+  --goals-mint: #00e7b9; --goals-positive: #007a63; --goals-danger: #c42650; --goals-warning: #856700; --goals-cyan: #007589;
+}
+:root[data-theme="dark"]:has([data-goals-page]) {
+  --goals-app: #202020; --goals-main: #202020; --goals-card: rgb(8 11 15 / .20);
+  --goals-border: #28313b; --goals-outer: #454545; --goals-divider: #28313b;
+  --goals-control: rgb(26 33 41 / .78); --goals-text: #f5f7fa; --goals-secondary: #9ca6b2; --goals-tertiary: #7a8190;
+  --goals-link: #348dfc; --goals-purple-text: #b98cff; --goals-positive: #00e7b9; --goals-danger: #fd4873; --goals-warning: #ffc700; --goals-cyan: #15e3ff;
+}
+:root [data-shell-viewport]:has([data-goals-page]) {
+  --floating-nav-surface: #f9f9f9;
+  --floating-nav-border: var(--goals-outer);
+  --floating-nav-active: var(--goals-blue);
+  background: var(--goals-app);
+}
+:root[data-theme="dark"] [data-shell-viewport]:has([data-goals-page]) { --floating-nav-surface: #202020; }
+:root[data-theme] [data-app-shell] > [data-app-scroll]:has([data-goals-page]) {
+  padding: 16px 32px; background: var(--goals-main); border: 1px solid var(--goals-outer);
+  box-shadow: 0 14px 56px rgb(0 0 0 / .24);
+}
+:is([data-goals-page], .goals-modal-layer) {
+  --text-primary: var(--goals-text); --text-secondary: var(--goals-secondary); --text-tertiary: var(--goals-tertiary);
+  --background-elevated: var(--goals-main); --background-control: var(--goals-control); --border-default: var(--goals-border);
+  color: var(--text-primary); min-width: 0;
+  [class~="text-[#9CA6B2]"] { color: var(--text-secondary); }
+  [class~="text-[#22C55E]"] { color: var(--goals-positive); }
+  [class~="text-[#3B82F6]"], [class~="text-[#60A5FA]"] { color: var(--goals-link); }
+  [class~="text-[#A78BFA]"] { color: var(--goals-purple-text); }
+  [class~="text-[#F43F5E]"] { color: var(--goals-danger); }
+  [class~="text-[#F59E0B]"] { color: var(--goals-warning); }
+  [class~="bg-[#28313B]/90"] { background: var(--goals-divider); }
+  [class~="bg-[#22C55E]"] { background: var(--goals-mint); }
+  [class~="bg-[#1A2129]/78"], [class~="bg-[#1A2129]/45"] { background: var(--goals-control); }
+  [class~="border-[#28313B]"] { border-color: var(--goals-border); }
+  [class~="bg-[#3B82F6]"] { background: var(--goals-blue); color: #1a1a1a; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  :is(button, select, input):focus-visible { outline: 2px solid var(--goals-blue); outline-offset: 3px; }
+}
+:root[data-theme] :is([data-goals-page], .goals-modal-layer) [class~="bg-[#3B82F6]"] { color: #1a1a1a !important; }
+[data-goals-page] .goals-layout { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+[data-goals-page] .goals-brand { display: flex; align-items: center; gap: 18.375px; min-height: 37px; }
+[data-goals-page] .goals-brand span { font: 500 21.44px var(--font-poppins), sans-serif; letter-spacing: .4288px; }
+[data-goals-page] .goals-layout > header { height: auto; min-height: 58px; gap: 16px; }
+[data-goals-page] .goals-layout > header > div { width: auto; height: auto; min-width: 0; }
+[data-goals-page] .goals-layout > header > div:last-child { flex-shrink: 0; }
+[data-goals-page] .goals-layout > header h1 { line-height: 1.3; }
+[data-goals-page] .goals-layout > header p { max-width: 650px; line-height: 1.4; }
+[data-goals-page] .goals-layout > section { width: 100%; height: auto; min-width: 0; }
+[data-goals-page] .goals-layout > section[aria-label] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+[data-goals-page] .goals-card { border: 1px solid var(--goals-border); background: var(--goals-card); border-radius: 20px; min-width: 0; width: auto; height: auto; overflow-wrap: anywhere; }
+[data-goals-page] .goals-layout > section[aria-label] > article { min-height: 115px; }
+[data-goals-page] .goals-layout > section[aria-label] > article > div:first-child { min-height: 24px; height: auto; }
+[data-goals-page] .goals-layout > section[aria-label] > article > div:last-child { max-width: 100%; }
+[data-goals-page] .truncate { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.3; }
+[data-goals-page] .goals-layout > section:nth-of-type(2),
+[data-goals-page] .goals-layout > section:nth-of-type(3) { display: grid; grid-template-columns: minmax(0, 677fr) minmax(0, 409fr); }
+[data-goals-page] .goals-layout > section:nth-of-type(2) > article { min-height: 210px; gap: 8px; }
+[data-goals-page] .goals-layout > section:nth-of-type(3) > article { min-height: 222px; }
+[data-goals-page] .goals-card > :is(div, button) { max-width: 100%; }
+[data-goals-page] .goals-card > div { height: auto; min-width: 0; }
+[data-goals-page] .goals-card > div > div { min-width: 0; }
+[data-goals-page] .goals-card > button { height: auto; min-height: 30px; padding: 6px 10px; }
+[data-goals-page] .goals-overview { display: flex; align-items: center; gap: 14px; width: 100%; }
+[data-goals-page] .goals-overview > img { flex-shrink: 0; }
+[data-goals-page] .goals-details { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 7px; }
+[data-goals-page] .goals-details > div { width: 100%; min-width: 0; }
+[data-goals-page] .goals-details > div:last-child { height: auto; gap: 8px; flex-wrap: wrap; }
+[data-goals-page] .goals-details > div:nth-child(2) { height: auto; flex-wrap: wrap; }
+[data-goals-page] .goals-layout > section:nth-of-type(2) > article:first-child > div:first-child { min-height: 28px; gap: 8px; }
+[data-goals-page] .goals-layout > section:nth-of-type(2) > article:first-child > div:first-child > div { flex-wrap: wrap; }
+[data-goals-page] .goals-layout > section:nth-of-type(2) > article:last-child > div { flex: 1; }
+[data-goals-page] .goals-layout > section:nth-of-type(2) > article:last-child > div > img { flex-shrink: 0; }
+[data-goals-page] .goals-layout > section:last-child { min-height: 78px; }
+[data-goals-page] .goals-layout dl { width: 100%; }
+[data-goals-page] .goals-layout dl > div { gap: 12px; padding-block: 5px; border-bottom: 1px solid var(--goals-divider); }
+[data-goals-page] .goals-layout dl > div:last-child { border-bottom: 0; }
+[data-goals-page] .goals-layout dd { text-align: right; }
+[data-goals-page] .goals-system-state { border: 1px solid #ffc700; background: rgb(255 199 0 / .1); border-radius: 12px; padding: 12px; font-size: 12px; }
+[data-goals-page] .goals-loading { display: grid; place-items: center; min-height: 580px; color: var(--text-secondary); font-size: 14px; }
+
+/* Portaled presentation only: forms, validation and persistence stay in the existing modals. */
+.goals-modal-layer { position: fixed; inset: 0; z-index: 80; overflow-y: auto; overscroll-behavior: contain; }
+.goals-modal-layer > div { position: static; min-height: 100%; padding: 24px 16px; }
+.goals-modal-layer [role="dialog"] { width: min(680px, 100%); height: auto; overflow: visible; margin-block: auto; }
+.goals-modal-layer [role="dialog"] > div[class~="mt-[108px]"] { margin-top: 24px; }
+.goals-modal-layer [role="dialog"] > div[class~="mt-[48px]"] { margin-top: 24px; }
+.goals-modal-layer [role="dialog"] > div > div[class~="w-[196px]"] { flex: 1; min-width: 0; width: auto; height: auto; }
+.goals-modal-layer [class~="h-[110px]"] { height: auto; min-height: 110px; }
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  [data-goals-page] .goals-layout > section:nth-of-type(2),
+  [data-goals-page] .goals-layout > section:nth-of-type(3) { grid-template-columns: minmax(0, 1fr); }
+  [data-goals-page] .goals-card > :is(div, button) { width: 100%; }
+  [data-goals-page] .goals-layout > section:last-child { flex-direction: column; align-items: stretch; gap: 12px; }
+  [data-goals-page] .goals-layout > section:last-child > div { height: auto; }
+}
+@media (max-width: 767px) {
+  :root[data-theme] [data-app-shell] > [data-app-scroll]:has([data-goals-page]) { padding: 20px 16px; border-radius: 0; }
+  [data-goals-page] .goals-layout > header { flex-wrap: wrap; }
+  [data-goals-page] .goals-layout > header > div:last-child { width: 100%; justify-content: space-between; }
+  [data-goals-page] .goals-layout > section[aria-label],
+  [data-goals-page] .goals-layout > section:nth-of-type(2),
+  [data-goals-page] .goals-layout > section:nth-of-type(3) { grid-template-columns: minmax(0, 1fr); }
+  [data-goals-page] .goals-card > :is(div, button) { width: 100%; }
+  [data-goals-page] .goals-overview { flex-direction: column; align-items: stretch; }
+  [data-goals-page] .goals-overview > img { width: 100%; height: 160px; }
+  [data-goals-page] .goals-layout > section:last-child { flex-direction: column; align-items: stretch; gap: 12px; }
+  [data-goals-page] .goals-layout > section:last-child > div { width: 100%; height: auto; }
+  [data-goals-page] :is(button, select) { min-height: 44px; height: auto; padding-block: 8px; }
+  [data-goals-page] .goals-card p { font-size: 12px; line-height: 1.5; }
+  [data-goals-page] .goals-card h2 { height: auto; }
+  .goals-modal-layer [role="dialog"] { padding: 20px; overflow-wrap: anywhere; }
+  .goals-modal-layer [role="dialog"] > header { height: auto; flex-wrap: wrap; gap: 8px; }
+  .goals-modal-layer [role="dialog"] > header > div { margin: 0; }
+  .goals-modal-layer form { gap: 16px; }
+  .goals-modal-layer form > label { grid-column: span 2; }
+  .goals-modal-layer [role="dialog"] > div[class~="mt-[48px]"] { flex-direction: column; }
+  .goals-modal-layer [role="dialog"] :is(div[class~="h-[92px]"], div[class~="h-[96px]"], div[class~="h-[88px]"], div[class~="h-[58px]"]) { height: auto; min-height: 70px; gap: 12px; flex-wrap: wrap; }
+  .goals-modal-layer form > div:last-child, .goals-modal-layer form > div:last-child > div { flex-wrap: wrap; gap: 8px; }
+  .goals-modal-layer button { min-height: 44px; }
+}

@@ -7,7 +7,7 @@ type CategoryAggregateUnavailableReason = FinancialAggregateUnavailableReason | 
 
 export type DerivedRatio =
   | { available: true; value: number }
-  | { available: false; reason: "invalid_operand" | "zero_denominator" };
+  | { available: false; reason: FinancialAggregateUnavailableReason | "zero_denominator" };
 
 export type TransactionCategoryTotal = { categoryKey: string; category: string | null; amount: number };
 export type RisingTransactionCategory = TransactionCategoryTotal & { growth: number };
@@ -16,6 +16,7 @@ type TransactionKpiCommon = {
   month: string;
   previousMonth: string;
   monthTransactions: Transaction[];
+  categoryComparisonAvailable: boolean;
 };
 
 type AvailableCategoryAggregates = {
@@ -41,7 +42,7 @@ export type TransactionKpiAggregates = TransactionKpiCommon & (
       income: number;
       expenses: number;
       netCashFlow: number;
-      previousExpenses: number;
+      previousExpenses: number | null;
       incomeUsage: DerivedRatio;
       expenseVariation: DerivedRatio;
       largestIncome: number | null;
@@ -64,48 +65,46 @@ export type TransactionKpiAggregates = TransactionKpiCommon & (
     }
 );
 
-export function calculateTransactionKpiAggregates(transactions: Transaction[], month: string): TransactionKpiAggregates {
+// Current-period derivation is independent of previous-period comparison validity.
+export function calculateCurrentTransactionAggregates(transactions: Transaction[], month: string): TransactionKpiAggregates {
   const previousMonth = getPreviousTransactionMonth(month);
-  const monthTransactions = transactions.filter((transaction) => transaction.dateISO.slice(0, 7) === month);
-  const previousTransactions = transactions.filter((transaction) => transaction.dateISO.slice(0, 7) === previousMonth);
-  const periodTransactions = [...monthTransactions, ...previousTransactions];
-  if (periodTransactions.some((transaction) => !isFinancialTransactionType(transaction.type))) {
-    return unavailable(month, previousMonth, monthTransactions, "invalid_transaction_type");
-  }
-  const incomeTransactions = monthTransactions.filter((transaction) => transaction.type === "income");
-  const expenseTransactions = monthTransactions.filter((transaction) => transaction.type === "expense");
-  const previousExpenseTransactions = previousTransactions.filter((transaction) => transaction.type === "expense");
-  const income = aggregateMoney(incomeTransactions.map((transaction) => transaction.amount));
-  const expenses = aggregateMoney(expenseTransactions.map((transaction) => transaction.amount));
-  const previousExpenses = aggregateMoney(previousExpenseTransactions.map((transaction) => transaction.amount));
-  if (!income.available || !expenses.available || !previousExpenses.available) {
-    return unavailable(month, previousMonth, monthTransactions, firstFailure(income, expenses, previousExpenses));
-  }
+  const monthTransactions = transactions.filter(transaction => transaction.dateISO.slice(0, 7) === month);
+  if (monthTransactions.some(transaction => !isFinancialTransactionType(transaction.type))) return unavailable(month, previousMonth, monthTransactions, "invalid_transaction_type");
+  const incomeTransactions = monthTransactions.filter(transaction => transaction.type === "income");
+  const expenseTransactions = monthTransactions.filter(transaction => transaction.type === "expense");
+  const income = aggregateMoney(incomeTransactions.map(transaction => transaction.amount));
+  const expenses = aggregateMoney(expenseTransactions.map(transaction => transaction.amount));
+  if (!income.available || !expenses.available) return unavailable(month, previousMonth, monthTransactions, firstFailure(income, expenses));
   const netCashFlow = aggregateMoney([income.value, -expenses.value]);
-  const expenseDifference = aggregateMoney([expenses.value, -previousExpenses.value]);
-  if (!netCashFlow.available || !expenseDifference.available) return unavailable(month, previousMonth, monthTransactions, firstFailure(netCashFlow, expenseDifference));
-  const incomeUsage = calculateSafeRatio(expenses.value, income.value);
-  const expenseVariation = calculateSafeRatio(expenseDifference.value, previousExpenses.value);
-  const largestIncome = incomeTransactions.length === 0 ? null : incomeTransactions.reduce((largest, transaction) => transaction.amount > largest ? transaction.amount : largest, incomeTransactions[0].amount);
-  const financial = { available: true, unavailableReason: null, month, previousMonth, monthTransactions, income: income.value, expenses: expenses.value, netCashFlow: netCashFlow.value, previousExpenses: previousExpenses.value, incomeUsage, expenseVariation, largestIncome } as const;
-  const taxonomyFailure = periodTransactions
-    .filter((transaction) => transaction.classification.kind !== "uncategorized")
-    .map((transaction) => inspectCategoryReference(transaction.category, transaction.type))
-    .find((result) => !result.available);
-  if (taxonomyFailure && !taxonomyFailure.available) {
-    return { ...financial, categoryAggregationAvailable: false, categoryAggregationUnavailableReason: taxonomyFailure.unavailableReason, categoryTotals: [], previousCategoryTotals: [], risingCategory: null };
-  }
+  if (!netCashFlow.available) return unavailable(month, previousMonth, monthTransactions, netCashFlow.reason);
+  const financial = { available: true, unavailableReason: null, month, previousMonth, monthTransactions, income: income.value, expenses: expenses.value, netCashFlow: netCashFlow.value,
+    previousExpenses: null, expenseVariation: { available: false, reason: "invalid_operand" }, incomeUsage: calculateSafeRatio(expenses.value, income.value),
+    largestIncome: incomeTransactions.length === 0 ? null : incomeTransactions.reduce((largest, transaction) => Math.max(largest, transaction.amount), 0), categoryComparisonAvailable: false } as const;
+  const taxonomyFailure = monthTransactions.filter(transaction => transaction.classification.kind !== "uncategorized").map(transaction => inspectCategoryReference(transaction.category, transaction.type)).find(result => !result.available);
   const categoryTotals = aggregateCategoryExpenses(expenseTransactions);
-  const previousCategoryTotals = aggregateCategoryExpenses(previousExpenseTransactions);
-  if (!categoryTotals.available || !previousCategoryTotals.available) {
-    const reason = firstFailure(categoryTotals, previousCategoryTotals);
+  if (taxonomyFailure && !taxonomyFailure.available || !categoryTotals.available) {
+    const reason = taxonomyFailure && !taxonomyFailure.available ? taxonomyFailure.unavailableReason : firstFailure(categoryTotals);
     return { ...financial, categoryAggregationAvailable: false, categoryAggregationUnavailableReason: reason, categoryTotals: [], previousCategoryTotals: [], risingCategory: null };
   }
-  const risingCategory = findRisingCategory(categoryTotals.value, previousCategoryTotals.value);
-  if (!risingCategory.available) {
-    return { ...financial, categoryAggregationAvailable: false, categoryAggregationUnavailableReason: risingCategory.reason === "unsafe_aggregate" ? "unsafe_aggregate" : "invalid_operand", categoryTotals: [], previousCategoryTotals: [], risingCategory: null };
-  }
-  return { ...financial, categoryAggregationAvailable: true, categoryAggregationUnavailableReason: null, categoryTotals: categoryTotals.value, previousCategoryTotals: previousCategoryTotals.value, risingCategory: risingCategory.value };
+  return { ...financial, categoryAggregationAvailable: true, categoryAggregationUnavailableReason: null, categoryTotals: categoryTotals.value, previousCategoryTotals: [], risingCategory: null };
+}
+
+export function calculateTransactionKpiAggregates(transactions: Transaction[], month: string): TransactionKpiAggregates {
+  const current = calculateCurrentTransactionAggregates(transactions, month);
+  if (!current.available) return current;
+  const previousTransactions = transactions.filter(transaction => transaction.dateISO.slice(0, 7) === current.previousMonth);
+  const previousTypeInvalid = previousTransactions.some(transaction => !isFinancialTransactionType(transaction.type));
+  const previousExpenses = aggregateMoney(previousTransactions.filter(transaction => transaction.type === "expense").map(transaction => transaction.amount));
+  if (previousTypeInvalid || !previousExpenses.available) return { ...current, expenseVariation: { available: false, reason: previousTypeInvalid ? "invalid_transaction_type" : firstFailure(previousExpenses) } };
+  const difference = aggregateMoney([current.expenses, -previousExpenses.value]);
+  const financial = { ...current, previousExpenses: previousExpenses.value, expenseVariation: difference.available ? calculateSafeRatio(difference.value, previousExpenses.value) : { available: false, reason: difference.reason } as const };
+  const previousTaxonomyInvalid = previousTransactions.some(transaction => transaction.classification.kind !== "uncategorized" && !inspectCategoryReference(transaction.category, transaction.type).available);
+  if (!current.categoryAggregationAvailable || previousTaxonomyInvalid) return financial;
+  const previousCategories = aggregateCategoryExpenses(previousTransactions.filter(transaction => transaction.type === "expense"));
+  if (!previousCategories.available) return financial;
+  const risingCategory = findRisingCategory(current.categoryTotals, previousCategories.value);
+  if (!risingCategory.available) return financial;
+  return { ...financial, categoryAggregationAvailable: true, categoryAggregationUnavailableReason: null, categoryComparisonAvailable: true, previousCategoryTotals: previousCategories.value, risingCategory: risingCategory.value };
 }
 
 export function calculateSafeRatio(numerator: number, denominator: number): DerivedRatio {
@@ -159,5 +158,5 @@ function firstFailure(...results: Array<MoneyAggregationResult | { available: tr
 }
 
 function unavailable(month: string, previousMonth: string, monthTransactions: Transaction[], reason: FinancialAggregateUnavailableReason): TransactionKpiAggregates {
-  return { available: false, unavailableReason: reason, month, previousMonth, monthTransactions, income: null, expenses: null, netCashFlow: null, previousExpenses: null, incomeUsage: null, expenseVariation: null, categoryTotals: [], previousCategoryTotals: [], risingCategory: null, largestIncome: null, categoryAggregationAvailable: false, categoryAggregationUnavailableReason: reason };
+  return { available: false, categoryComparisonAvailable: false, unavailableReason: reason, month, previousMonth, monthTransactions, income: null, expenses: null, netCashFlow: null, previousExpenses: null, incomeUsage: null, expenseVariation: null, categoryTotals: [], previousCategoryTotals: [], risingCategory: null, largestIncome: null, categoryAggregationAvailable: false, categoryAggregationUnavailableReason: reason };
 }

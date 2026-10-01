@@ -6,7 +6,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
 import { ApexDonutChart } from "@/components/charts/ApexDonutChart";
 
-const categoryPalette = ["var(--dashboard-brand-primary)", "var(--dashboard-brand-accent)", "var(--dashboard-brand-primary-hover)", "#22C55E", "#8B5CF6"];
+const categoryPalette = ["var(--dashboard-brand-primary)", "var(--dashboard-category-2, var(--dashboard-brand-accent))", "var(--dashboard-category-3, var(--dashboard-brand-primary-hover))", "var(--dashboard-category-4, #22C55E)", "var(--dashboard-category-5, #8B5CF6)"];
 export type DisplayCategorySpending = DashboardCategorySpending & { color: string; composition?: DashboardCategorySpending[] };
 
 export function getDisplayCategorySpending(data: DashboardCategorySpending[], maxItems = 5): DisplayCategorySpending[] {

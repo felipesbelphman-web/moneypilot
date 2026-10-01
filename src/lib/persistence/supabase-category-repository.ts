@@ -1,3 +1,4 @@
+import { retrieveFinanceCollection } from "./finance-collection-pagination.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Category, CategoryCreateInput, CategoryUpdateInput } from "@/lib/domain/category";
 import { categoryArchiveUpdate, categoryRestoreUpdate } from "@/lib/domain/category";
@@ -19,20 +20,32 @@ export class SupabaseCategoryRepository {
 
   async listCategories(): Promise<Category[]> {
     const userId = await this.authenticatedUserId();
-    const result = await this.ordered(
-      this.client.from("categories").select(categoryProjection).eq("user_id", userId).is("archived_at", null),
-    );
-    throwIfSupabaseError(result.error);
-    return (result.data ?? []).map(categoryRowToDomain);
+    const rows = await retrieveFinanceCollection({
+      fetchPage: async ({ from, to, count }) => {
+        const result = await this.ordered(
+          this.client.from("categories").select(categoryProjection, { count }).eq("user_id", userId).is("archived_at", null),
+        ).range(from, to);
+        throwIfSupabaseError(result.error);
+        return result;
+      },
+      identity: row => row.id,
+    });
+    return rows.map(categoryRowToDomain);
   }
 
   async listAllCategories(): Promise<Category[]> {
     const userId = await this.authenticatedUserId();
-    const result = await this.ordered(
-      this.client.from("categories").select(categoryProjection).eq("user_id", userId),
-    );
-    throwIfSupabaseError(result.error);
-    return (result.data ?? []).map(categoryRowToDomain);
+    const rows = await retrieveFinanceCollection({
+      fetchPage: async ({ from, to, count }) => {
+        const result = await this.ordered(
+          this.client.from("categories").select(categoryProjection, { count }).eq("user_id", userId),
+        ).range(from, to);
+        throwIfSupabaseError(result.error);
+        return result;
+      },
+      identity: row => row.id,
+    });
+    return rows.map(categoryRowToDomain);
   }
 
   async createCategory(input: CreateCategory): Promise<Category> {

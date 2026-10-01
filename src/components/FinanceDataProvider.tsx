@@ -7,9 +7,11 @@ import type { Goal } from "@/components/goals/goal-model";
 import type { GoalContributionPlan } from "@/components/goals/goal-contribution-plan";
 import type { Investment } from "@/components/investments/investment-model";
 import type { LegacyTransactionCreateInput, Transaction, TransactionCategoryWrite, TransactionCreateInput, TransactionUpdateInput } from "@/components/transactions/transaction-model";
-import { calculateCompleteCurrentBalance, type AccountBalanceSettings, type AccountBalanceSettingsInput } from "@/lib/domain/account-balance-settings";
+import { calculateCurrentBalance, type AccountBalanceSettings, type AccountBalanceSettingsInput } from "@/lib/domain/account-balance-settings";
 import type { Category, CategoryCreateInput, CategoryUpdateInput } from "@/lib/domain/category";
-import { mapFinanceRepositoryError, type FinanceError } from "@/lib/domain/finance-error";
+import { mapFinanceRepositoryError, FinanceError } from "@/lib/domain/finance-error";
+import { areFinanceResourcesReady, beginFinanceResourceHydration, createFinanceResourceStatuses, failFinanceResourceStatuses, settleFinanceResourceStatuses, type FinanceResourceStatuses } from "@/lib/persistence/finance-resource-status";
+import { goalPlanResources, periodGoalPlanResources } from "@/components/goals/goal-availability";
 import { validateAndNormalizeInvestment } from "@/lib/domain/investment-validation";
 import { aggregateFinanceHydrationError, authenticationHydrationError, createEmptyFinanceData, isCurrentFinanceHydration, mergeCategoryLoadResult, mergeConfirmedCategory, mergeFinanceLoadResult, selectActiveCategories, settleFinanceProviderHydration } from "@/lib/persistence/finance-hydration";
 import { executeFinanceMutation } from "@/lib/persistence/finance-mutation";
@@ -17,6 +19,12 @@ import type { FinanceHydrationErrors } from "@/lib/persistence/finance-persisten
 import { SupabaseCategoryRepository } from "@/lib/persistence/supabase-category-repository";
 import { SupabaseFinanceRepository } from "@/lib/persistence/supabase-finance-repository";
 import { createClient } from "@/lib/supabase/client";
+
+import { TransactionPeriodCache, type TransactionPeriodState } from "@/lib/persistence/transaction-period-state";
+import { requireCompletePeriodResult, type TransactionDateRange } from "@/lib/persistence/finance-query-contracts";
+import { readyTransactionPeriod } from "@/lib/persistence/transaction-period-state";
+import { financialMonthRange } from "@/lib/dates/financial-month-range";
+import { getCurrentFinancialMonth } from "@/components/goals/goal-savings-capacity";
 
 export type FinanceMutationOperation =
   | "saveAccountBalanceSettings"
@@ -53,6 +61,9 @@ const idleMutationState: FinanceMutationState = {
 };
 
 type FinanceDataContextValue = {
+  getTransactionPeriodState: (range: TransactionDateRange) => TransactionPeriodState;
+  ensureTransactionPeriod: (range: TransactionDateRange) => Promise<void>;
+  refreshTransactionPeriod: (range: TransactionDateRange) => Promise<void>;
   accountBalanceSettings: AccountBalanceSettings | null;
   accountBalance: number | null;
   transactions: Transaction[];
@@ -70,6 +81,7 @@ type FinanceDataContextValue = {
   activeCategories: Category[];
   isHydrating: boolean;
   hydrationError: FinanceError | null;
+  resourceStatuses: FinanceResourceStatuses;
   mutationState: FinanceMutationState;
   saveAccountBalanceSettings: (settings: AccountBalanceSettingsInput) => Promise<AccountBalanceSettings>;
   createTransaction: (transaction: LegacyTransactionCreateInput) => Promise<Transaction>;
@@ -85,7 +97,7 @@ type FinanceDataContextValue = {
   deleteBudgetAdjustment: (month: string) => Promise<void>;
   upsertGoal: (goal: Goal) => Promise<Goal>;
   deleteGoal: (goalId: string) => Promise<void>;
-  upsertGoalContributionPlan: (plan: GoalContributionPlan) => Promise<GoalContributionPlan>;
+  upsertGoalContributionPlan: (plan: GoalContributionPlan, range?: TransactionDateRange) => Promise<GoalContributionPlan>;
   deleteGoalContributionPlan: (goalId: string) => Promise<void>;
   upsertInvestment: (investment: Investment) => Promise<Investment>;
   deleteInvestment: (investmentId: string) => Promise<void>;
@@ -102,8 +114,25 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
   const [repository] = useState(() => new SupabaseFinanceRepository(supabase));
   const [categoryRepository] = useState(() => new SupabaseCategoryRepository(supabase));
   const [accountBalanceSettings, setAccountBalanceSettings] = useState<AccountBalanceSettings | null>(null);
-  const [transactionsComplete, setTransactionsComplete] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [resourceStatuses, setResourceStatuses] = useState(() => beginFinanceResourceHydration(createFinanceResourceStatuses()));
+  const resourceStatusesRef = useRef(resourceStatuses);
+  const [transactions, setTransactionsState] = useState<Transaction[]>([]);
+  const transactionsRef = useRef<Transaction[]>([]);
+  const confirmedTransactionDatesRef = useRef(new Map<string, string>());
+  const setTransactions = useCallback<Dispatch<SetStateAction<Transaction[]>>>((update) => {
+    const next = typeof update === "function" ? update(transactionsRef.current) : update;
+    transactionsRef.current = next;
+    setTransactionsState(next);
+  }, []);
+  const [periodRevision, setPeriodRevision] = useState(0);
+  const [periodCache] = useState(() => new TransactionPeriodCache(() => setPeriodRevision(value => value + 1)));
+  const getTransactionPeriodState = useCallback((range: TransactionDateRange) => {
+    // Changing this callback on publication notifies context consumers of cache updates.
+    void periodRevision;
+    return periodCache.get(range);
+  }, [periodCache, periodRevision]);
+  const ensureTransactionPeriod = useCallback((range: TransactionDateRange) => periodCache.request(range, false, (owner, scope) => repository.listTransactionsForPeriod(owner, scope)), [periodCache, repository]);
+  const refreshTransactionPeriod = useCallback((range: TransactionDateRange) => periodCache.request(range, true, (owner, scope) => repository.listTransactionsForPeriod(owner, scope)), [periodCache, repository]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [budgetAdjustments, setBudgetAdjustments] = useState<Record<string, BudgetAdjustment>>({});
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -118,9 +147,15 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
   const activeMutationKeysRef = useRef(new Set<string>());
   const hydrationErrorsRef = useRef<FinanceHydrationErrors>({});
 
+  const updateResourceStatuses = useCallback((update: (previous: FinanceResourceStatuses) => FinanceResourceStatuses) => {
+    resourceStatusesRef.current = update(resourceStatusesRef.current);
+    setResourceStatuses(resourceStatusesRef.current);
+  }, []);
+
   const clearFinanceState = useCallback(() => {
+    confirmedTransactionDatesRef.current.clear();
     setAccountBalanceSettings(null);
-    setTransactionsComplete(false);
+    updateResourceStatuses(createFinanceResourceStatuses);
     setTransactions([]);
     setBudgets([]);
     setBudgetAdjustments({});
@@ -128,14 +163,15 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     setGoalContributionPlans({});
     setInvestments([]);
     setCategories([]);
-  }, []);
+  }, [setTransactions, updateResourceStatuses]);
 
   const resetMutationLifecycle = useCallback((userId: string | null) => {
     currentUserIdRef.current = userId;
     accountGenerationRef.current += 1;
+    periodCache.synchronizeOwner(userId, accountGenerationRef.current);
     activeMutationKeysRef.current.clear();
     setMutationState(idleMutationState);
-  }, []);
+  }, [periodCache]);
 
   const runMutation = useCallback(async <Result,>(
     operation: FinanceMutationOperation,
@@ -156,6 +192,41 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     }, persist, commit);
   }, []);
 
+  const runTransactionMutation = useCallback(<Result,>(
+    operation: FinanceMutationOperation,
+    entityKey: string,
+    oldId: string | null,
+    proposedDates: readonly string[],
+    persist: (userId: string) => Promise<Result>,
+    confirmedDates: (result: Result) => readonly string[],
+    commit: (result: Result) => void,
+  ) => {
+    const owner = currentUserIdRef.current;
+    const generation = accountGenerationRef.current;
+    const confirmedOldDate = oldId === null ? undefined : confirmedTransactionDatesRef.current.get(oldId);
+    const oldDates = oldId === null ? [] : confirmedOldDate ? [confirmedOldDate] : [...new Set([
+      ...transactionsRef.current.filter(item => item.id === oldId).map(item => item.dateISO),
+      ...periodCache.datesForTransaction(oldId),
+    ])];
+    const unknown = oldId !== null && oldDates.length === 0;
+    const isCurrent = () => owner !== null && currentUserIdRef.current === owner && accountGenerationRef.current === generation;
+    return runMutation(operation, entityKey, async userId => {
+      try { return await persist(userId); }
+      catch (error) {
+        if (isCurrent()) periodCache.invalidate(unknown ? null : [...oldDates, ...proposedDates]);
+        throw error;
+      }
+    }, result => {
+      const dates = confirmedDates(result);
+      periodCache.invalidate(unknown ? null : [...oldDates, ...dates]);
+      if (oldId !== null) {
+        if (dates.length === 1) confirmedTransactionDatesRef.current.set(oldId, dates[0]);
+        else confirmedTransactionDatesRef.current.delete(oldId);
+      }
+      commit(result);
+    });
+  }, [periodCache, runMutation]);
+
   const saveAccountBalanceSettings = useCallback((settings: AccountBalanceSettingsInput) => runMutation(
     "saveAccountBalanceSettings",
     "accountBalanceSettings",
@@ -163,48 +234,63 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     setAccountBalanceSettings,
   ), [repository, runMutation]);
 
-  const createClassifiedTransaction = useCallback((transaction: TransactionCreateInput) => runMutation(
+  const createClassifiedTransaction = useCallback((transaction: TransactionCreateInput) => runTransactionMutation(
     "createTransaction",
     `transaction:${transaction.id}`,
+    null,
+    [transaction.dateISO],
     (userId) => repository.createTransaction(userId, transaction),
+    (confirmed) => [confirmed.dateISO],
     (confirmed) => setTransactions((current) => [confirmed, ...current]),
-  ), [repository, runMutation]);
+  ), [repository, runTransactionMutation, setTransactions]);
 
   const createTransaction = useCallback((transaction: LegacyTransactionCreateInput) => createClassifiedTransaction({
     ...transaction,
     categoryWrite: { kind: "legacy", categoryName: transaction.category, categoryColor: transaction.categoryColor },
   }), [createClassifiedTransaction]);
 
-  const importTransactions = useCallback((transactions: LegacyTransactionCreateInput[]) => runMutation(
+  const importTransactions = useCallback((transactions: LegacyTransactionCreateInput[]) => runTransactionMutation(
     "importTransactions",
     `batch:import:${Date.now()}`,
+    null,
+    transactions.map(item => item.dateISO),
     (userId) => repository.createTransactions(userId, transactions.map((transaction) => ({ ...transaction, categoryWrite: { kind: "legacy", categoryName: transaction.category, categoryColor: transaction.categoryColor } }))),
+    (confirmed) => confirmed.map(item => item.dateISO),
     (confirmed) => setTransactions((current) => [...confirmed, ...current]),
-  ), [repository, runMutation]);
+  ), [repository, runTransactionMutation, setTransactions]);
 
-  const updateTransaction = useCallback((transaction: TransactionUpdateInput) => runMutation(
+  const updateTransaction = useCallback((transaction: TransactionUpdateInput) => runTransactionMutation(
     "updateTransaction",
     `transaction:${transaction.id}`,
+    transaction.id,
+    [transaction.dateISO],
     (userId) => repository.updateTransaction(userId, transaction),
+    (confirmed) => [confirmed.dateISO],
     (confirmed) => setTransactions((current) => current.map((item) => item.id === confirmed.id ? confirmed : item)),
-  ), [repository, runMutation]);
+  ), [repository, runTransactionMutation, setTransactions]);
 
-  const updateTransactionClassification = useCallback((transactionId: string, categoryWrite: Extract<TransactionCategoryWrite, { kind: "linked" | "uncategorized" }>) => runMutation(
+  const updateTransactionClassification = useCallback((transactionId: string, categoryWrite: Extract<TransactionCategoryWrite, { kind: "linked" | "uncategorized" }>) => runTransactionMutation(
     "updateTransactionClassification",
     `transaction:${transactionId}`,
+    transactionId,
+    [],
     (userId) => repository.updateTransactionClassification(userId, { id: transactionId, categoryWrite }),
+    (confirmed) => [confirmed.dateISO],
     (confirmed) => setTransactions((current) => current.map((item) => item.id === confirmed.id ? confirmed : item)),
-  ), [repository, runMutation]);
+  ), [repository, runTransactionMutation, setTransactions]);
 
   const linkTransactionCategory = useCallback((transactionId: string, category: Extract<TransactionCategoryWrite, { kind: "linked" }>) => updateTransactionClassification(transactionId, category), [updateTransactionClassification]);
   const unlinkTransactionCategory = useCallback((transactionId: string) => updateTransactionClassification(transactionId, { kind: "uncategorized" }), [updateTransactionClassification]);
 
-  const deleteTransaction = useCallback((transactionId: string) => runMutation(
+  const deleteTransaction = useCallback((transactionId: string) => runTransactionMutation(
     "deleteTransaction",
     `transaction:${transactionId}`,
+    transactionId,
+    [],
     (userId) => repository.deleteTransaction(userId, transactionId),
+    () => [],
     () => setTransactions((current) => current.filter((item) => item.id !== transactionId)),
-  ), [repository, runMutation]);
+  ), [repository, runTransactionMutation, setTransactions]);
 
   const upsertBudget = useCallback((budget: Budget) => runMutation(
     "upsertBudget",
@@ -263,12 +349,23 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     },
   ), [repository, runMutation]);
 
-  const upsertGoalContributionPlan = useCallback((plan: GoalContributionPlan) => runMutation(
+  const upsertGoalContributionPlan = useCallback((plan: GoalContributionPlan, range?: TransactionDateRange) => runMutation(
     "upsertGoalContributionPlan",
     `goalContributionPlan:${plan.goalId}`,
-    (userId) => repository.upsertGoalContributionPlan(userId, plan),
+    (userId) => {
+      // Check current status at submission time, including callbacks from an open modal.
+      if (range === undefined) {
+        if (!areFinanceResourcesReady(resourceStatusesRef.current, goalPlanResources)) throw new FinanceError("repository_unavailable");
+      } else {
+        const result = readyTransactionPeriod(periodCache.get(range));
+        if (!result || !areFinanceResourcesReady(resourceStatusesRef.current, periodGoalPlanResources)) throw new FinanceError("repository_unavailable");
+        requireCompletePeriodResult(result, range);
+        requireCompletePeriodResult(result, financialMonthRange(getCurrentFinancialMonth()));
+      }
+      return repository.upsertGoalContributionPlan(userId, plan);
+    },
     (confirmed) => setGoalContributionPlans((current) => ({ ...current, [confirmed.goalId]: confirmed })),
-  ), [repository, runMutation]);
+  ), [periodCache, repository, runMutation]);
 
   const deleteGoalContributionPlan = useCallback((goalId: string) => runMutation(
     "deleteGoalContributionPlan",
@@ -358,12 +455,13 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
       hydrationErrorsRef.current = {};
 
       if (!userId) {
+        updateResourceStatuses(createFinanceResourceStatuses);
         setIsHydrating(false);
         return;
       }
 
       setIsHydrating(true);
-      setTransactionsComplete(false);
+      updateResourceStatuses(beginFinanceResourceHydration);
 
       void settleFinanceProviderHydration(
         () => repository.loadFinanceData(userId),
@@ -374,7 +472,6 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
         const merged = mergeFinanceLoadResult(createEmptyFinanceData(), result);
         if (result.accountBalanceSettings.status === "success") setAccountBalanceSettings(merged.data.accountBalanceSettings);
         if (result.transactions.status === "success") setTransactions(merged.data.transactions);
-        setTransactionsComplete(result.transactions.status === "success");
         if (result.budgets.status === "success") setBudgets(merged.data.budgets);
         if (result.budgetAdjustments.status === "success") setBudgetAdjustments(Object.fromEntries(merged.data.budgetAdjustments.map((adjustment) => [adjustment.month, adjustment])));
         if (result.goals.status === "success") setGoals(merged.data.goals);
@@ -384,12 +481,15 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
         const hydrationErrors: FinanceHydrationErrors = { ...merged.errors };
         if (categoryResult.status === "failure") hydrationErrors.categories = categoryResult.error;
         hydrationErrorsRef.current = hydrationErrors;
+        updateResourceStatuses(previous => settleFinanceResourceStatuses(previous, hydrationErrors));
         setHydrationError(aggregateFinanceHydrationError(hydrationErrors));
         setIsHydrating(false);
       }).catch((error: unknown) => {
         if (!isCurrentHydration(requestId, userId)) return;
 
-        setHydrationError(mapFinanceRepositoryError(error));
+        const safeError = mapFinanceRepositoryError(error);
+        updateResourceStatuses(previous => failFinanceResourceStatuses(previous, safeError));
+        setHydrationError(safeError);
         setIsHydrating(false);
       });
     }
@@ -397,6 +497,11 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       authGeneration += 1;
       const userId = session?.user.id ?? null;
+      if (userId !== currentUserIdRef.current) {
+        // Close publication immediately, before the queued auth synchronization.
+        accountGenerationRef.current += 1;
+        periodCache.synchronizeOwner(null, accountGenerationRef.current);
+      }
       queueMicrotask(() => synchronizeUser(userId));
     });
 
@@ -407,6 +512,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
         clearFinanceState();
         resetMutationLifecycle(null);
         setHydrationError(authenticationHydrationError());
+        updateResourceStatuses(previous => failFinanceResourceStatuses(previous, authenticationHydrationError()));
         setIsHydrating(false);
         return;
       }
@@ -416,6 +522,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
       clearFinanceState();
       resetMutationLifecycle(null);
       setHydrationError(authenticationHydrationError());
+      updateResourceStatuses(previous => failFinanceResourceStatuses(previous, authenticationHydrationError()));
       setIsHydrating(false);
     });
 
@@ -425,19 +532,24 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
       hydrationGeneration += 1;
       currentUserIdRef.current = null;
       accountGenerationRef.current += 1;
+      periodCache.synchronizeOwner(null, accountGenerationRef.current);
       activeMutationKeys.clear();
       authListener.subscription.unsubscribe();
     };
-  }, [categoryRepository, clearFinanceState, repository, resetMutationLifecycle, supabase]);
+  }, [categoryRepository, clearFinanceState, periodCache, repository, resetMutationLifecycle, setTransactions, supabase, updateResourceStatuses]);
 
   const accountBalance = useMemo(
-    () => calculateCompleteCurrentBalance(accountBalanceSettings, transactions, transactionsComplete),
-    [accountBalanceSettings, transactions, transactionsComplete],
+    () => areFinanceResourcesReady(resourceStatuses, ["transactions", "accountBalanceSettings"])
+      ? calculateCurrentBalance(accountBalanceSettings, transactions) : null,
+    [accountBalanceSettings, transactions, resourceStatuses],
   );
 
   const activeCategories = useMemo(() => selectActiveCategories(categories), [categories]);
 
   const value = useMemo(() => ({
+    getTransactionPeriodState,
+    ensureTransactionPeriod,
+    refreshTransactionPeriod,
     accountBalanceSettings,
     accountBalance,
     transactions,
@@ -454,6 +566,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     activeCategories,
     isHydrating,
     hydrationError,
+    resourceStatuses,
     mutationState,
     saveAccountBalanceSettings,
     createTransaction,
@@ -478,7 +591,7 @@ export function FinanceDataProvider({ children }: { children: ReactNode }) {
     archiveCategory,
     restoreCategory,
     setBudgetAdjustment: (adjustment: BudgetAdjustment) => setBudgetAdjustments((current) => ({ ...current, [adjustment.month]: adjustment })),
-  }), [accountBalance, accountBalanceSettings, activeCategories, archiveCategory, budgetAdjustments, budgets, categories, createCategory, createClassifiedTransaction, createTransaction, importTransactions, deleteBudget, deleteBudgetAdjustment, deleteGoal, deleteGoalContributionPlan, deleteInvestment, deleteTransaction, goalContributionPlans, goals, hydrationError, investments, isHydrating, linkTransactionCategory, mutationState, restoreCategory, saveAccountBalanceSettings, transactions, unlinkTransactionCategory, updateCategory, updateTransaction, upsertBudget, upsertBudgetAdjustment, upsertGoal, upsertGoalContributionPlan, upsertInvestment]);
+  }), [getTransactionPeriodState, ensureTransactionPeriod, refreshTransactionPeriod, setTransactions, accountBalance, accountBalanceSettings, activeCategories, archiveCategory, budgetAdjustments, budgets, categories, createCategory, createClassifiedTransaction, createTransaction, importTransactions, deleteBudget, deleteBudgetAdjustment, deleteGoal, deleteGoalContributionPlan, deleteInvestment, deleteTransaction, goalContributionPlans, goals, hydrationError, resourceStatuses, investments, isHydrating, linkTransactionCategory, mutationState, restoreCategory, saveAccountBalanceSettings, transactions, unlinkTransactionCategory, updateCategory, updateTransaction, upsertBudget, upsertBudgetAdjustment, upsertGoal, upsertGoalContributionPlan, upsertInvestment]);
 
   return <FinanceDataContext.Provider value={value}>{children}</FinanceDataContext.Provider>;
 }

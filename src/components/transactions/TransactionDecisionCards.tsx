@@ -7,7 +7,10 @@ import type { Goal } from "@/components/goals/goal-model";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
 
-type TransactionDecisionCardsProps = { goals: Goal[]; isHydrating: boolean; hasLoadError: boolean; mobile?: boolean };
+import type { FinanceResourceStatus, FinanceResourceStatuses } from "@/lib/persistence/finance-resource-status";
+import { getTransactionsAvailability } from "./transactions-view-state";
+
+type TransactionDecisionCardsProps = { goals: Goal[]; resourceStatuses: FinanceResourceStatuses; transactionStatus: FinanceResourceStatus; mobile?: boolean };
 
 const decisionCopy = {
   en: { loading: "Loading your data…", loadError: "Unable to load the data for this analysis.", noPattern: "No pattern identified in this period", noGoals: "No goals created", noGoalsHelp: "Create a goal to track how your financial plan supports it.", goToGoals: "Go to goals →", insufficient: "There is not enough data yet to estimate the impact on this goal." },
@@ -19,15 +22,16 @@ const decisionCopy = {
   it: { loading: "Caricamento dei dati…", loadError: "Impossibile caricare i dati per questa analisi.", noPattern: "Nessun andamento identificato in questo periodo", noGoals: "Nessun obiettivo creato", noGoalsHelp: "Crea un obiettivo per monitorare come la pianificazione finanziaria può sostenerlo.", goToGoals: "Vai agli obiettivi →", insufficient: "Non ci sono ancora dati sufficienti per stimare l’impatto su questo obiettivo." },
 } as const;
 
-export function TransactionDecisionCards({ goals, isHydrating, hasLoadError, mobile = false }: TransactionDecisionCardsProps) {
+export function TransactionDecisionCards({ goals, resourceStatuses, transactionStatus, mobile = false }: TransactionDecisionCardsProps) {
   const { language } = useLanguage();
   const t = translations[language].appTransactions;
   const copy = decisionCopy[language];
-  const goalState = isHydrating ? "loading" : hasLoadError ? "error" : goals.length === 0 ? "empty" : "insufficient";
-  const patternMessage = isHydrating ? copy.loading : hasLoadError ? copy.loadError : copy.noPattern;
+  const { goalsReady } = getTransactionsAvailability(resourceStatuses);
+  const goalState = resourceStatuses.goals.status === "loading" ? "loading" : !goalsReady ? "error" : goals.length === 0 ? "empty" : "insufficient";
+  const patternMessage = transactionStatus.status === "loading" ? copy.loading : transactionStatus.status !== "ready" ? copy.loadError : copy.noPattern;
 
   return (
-    <div className={mobile ? "grid min-w-0 grid-cols-1 gap-3" : "grid h-[148px] min-w-0 max-w-full shrink-0 grid-cols-2 items-center gap-x-[24px]"}>
+    <div data-transaction-insights={mobile ? "mobile" : "desktop"} className={mobile ? "grid min-w-0 grid-cols-1 gap-3" : "grid h-[148px] min-w-0 max-w-full shrink-0 grid-cols-2 items-center gap-x-[24px]"}>
       <article className="flex h-[112px] min-h-[112px] min-w-0 flex-col justify-center gap-[24px] overflow-hidden rounded-[16.075px] border border-[var(--border-default)] bg-[var(--background-elevated)] px-[12.503px] pb-[8.931px] pt-[9.824px] shadow-[0_3.572px_12.503px_rgba(10,10,10,0.07)]">
         <div className="flex h-[18px] w-full items-center"><div className="flex items-center gap-[7.144px]"><Image src="/moneypilot/transactions/icons/sparkles-outline.svg" alt="" width={18} height={18} className="size-[18px]" /><h2 className="text-[14px] font-semibold">{t.patternDetected}</h2></div></div>
         <p className="truncate text-[12px] font-medium text-[var(--text-secondary)]">{patternMessage}</p>

@@ -55,7 +55,7 @@ test("categories route is wired to provider CRUD and contains no category mock s
   assert.match(source, /finance\.restoreCategory/);
   assert.doesNotMatch(source, /rawCategories/);
   assert.doesNotMatch(source, /deleteCategory/);
-  assert.match(source, /value: String\(finance\.activeCategories\.length\)/);
+  assert.match(source, /value: categoriesReady \? String\(finance\.activeCategories\.length\)/);
   assert.doesNotMatch(source, /value:\s*["'](?:18|42|92%)["']/);
   assert.doesNotMatch(source, /rawRules|rules\.map\(/);
   for (const merchant of ["LIDL", "Netflix", "Just Eat", "Dunnes", "Centra", "Spotify", "Boots"]) assert.doesNotMatch(source, new RegExp(merchant, "i"));
@@ -90,15 +90,15 @@ test("category action heading is scoped to categories and the idle editor card i
   const source = await readFile(new URL("../../src/app/categories/page.tsx", import.meta.url), "utf8");
   assert.match(source, /futureCopy\.actions/);
   assert.doesNotMatch(source, /tr\("Ações"\)|Stocks/);
-  assert.match(source, /\{\(editor \|\| feedback\) && <EditorPanel/);
+  assert.match(source, /\{categoriesReady && \(editor \|\| feedback\) && <EditorPanel/);
 });
 
 test("categories route renders loading, empty, partial-error and duplicate-error feedback", async () => {
   const source = await readFile(new URL("../../src/app/categories/page.tsx", import.meta.url), "utf8");
-  assert.match(source, /finance\.isHydrating/);
+  assert.match(source, /finance\.resourceStatuses\.categories\.status === "loading"/);
   assert.match(source, /emptyActive/);
   assert.match(source, /emptyArchived/);
-  assert.match(source, /finance\.hydrationError/);
+  assert.match(source, /hasLoadError/);
   assert.match(source, /duplicate_record/);
   assert.match(source, /role=\"alert\"/);
 });

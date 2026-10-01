@@ -1,3 +1,5 @@
+import { DashboardSectionState } from "./DashboardSystemStates";
+import type { DashboardSectionStatus } from "./dashboard-view-state";
 import Image from "next/image";
 import { useCurrency } from "@/components/CurrencyProvider";
 import Link from "next/link";
@@ -6,15 +8,19 @@ import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
 import { activeBudgetPlanCopyByLanguage } from "@/i18n/dashboard-copy";
 
-export function NextBestActionCard({ action, month, currentMonth }: { action: DashboardNextBestAction; month: string; currentMonth: string }) {
+export function NextBestActionCard({ action, month, currentMonth, availability = "ready" }: { availability?: DashboardSectionStatus; action: DashboardNextBestAction | null; month: string; currentMonth: string }) {
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency(); const t = translations[language].appDashboard;
-  const copy = resolveNextBestActionCopy(action, language);
-  const activePlanCopy = activeBudgetPlanCopyByLanguage[language];
-  const accent = action.tone === "warning" ? "#F59E0B" : action.tone === "positive" ? "#22C55E" : "var(--dashboard-brand-primary)";
   const [year, monthNumber] = month.split("-");
   const periodLabel = `${translations[language].financialFlow.months[Number(monthNumber) - 1]} ${year}`;
   const periodCaption = month === currentMonth ? t.currentPeriod.replace("{period}", periodLabel) : periodLabel;
+  if (availability !== "ready" || !action) return <article className="flex min-h-[208px] w-full min-w-0 flex-col overflow-hidden rounded-[19.307px] border border-[#28313B] bg-[rgba(8,11,15,0.20)] px-[14px] py-[12px] box-border">
+    <div className="flex h-[27px] shrink-0 items-center gap-[8px]"><Image src="/moneypilot/dashboard-next-best-action-icon.svg" alt="" width={18} height={18} className="size-[18px]" /><div className="min-w-0"><h2 className="whitespace-nowrap text-[14px] font-semibold leading-none text-[#F5F7FA]">{t.nextBestAction}</h2><span className="mt-[3px] block text-[7.5px] text-[#9CA6B2]">{periodCaption}</span></div></div>
+    <DashboardSectionState status={availability === "loading" ? "loading" : "error"} />
+  </article>;
+  const copy = resolveNextBestActionCopy(action, language);
+  const activePlanCopy = activeBudgetPlanCopyByLanguage[language];
+  const accent = action.tone === "warning" ? "#F59E0B" : action.tone === "positive" ? "#22C55E" : "var(--dashboard-brand-primary)";
   const actionHref = action.type === "insufficient_current_data"
     ? `/transactions?month=${month}`
     : action.type === "recovery_plan" || action.type === "review_budget" || action.type === "create_budget"

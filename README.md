@@ -543,7 +543,10 @@ MoneyPilot is being developed incrementally, beginning with the product experien
 * [x] Transaction management
 * [x] Transaction history
 * [x] Spending categories
-* [x] CSV transaction-import flow
+* [x] CSV statement import with review
+* [x] Local PDF statement extraction and review preview
+* [x] Explicitly reviewed PDF statement import
+* [x] Financial goals
 * [x] Real dashboard data integration
 * [ ] Complete budget-management workflow
 * [ ] Complete financial-goal workflow
@@ -670,3 +673,5 @@ Designed and developed by **Felipe S. Belphman**.
 MoneyPilot is an educational and personal financial-management project.
 
 The platform does not provide regulated financial, investment, tax, or legal advice. AI-assisted insights must be treated as informational guidance and should not replace advice from a qualified professional.
+
+**Plan better. Understand your money. Reach your goals.**

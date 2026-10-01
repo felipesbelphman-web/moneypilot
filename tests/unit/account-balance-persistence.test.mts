@@ -157,13 +157,12 @@ test("contains no service-role access in the account balance repository", async 
   assert.doesNotMatch(source, /service_role/i);
 });
 
-test("provider exposes a session-owned save and recalculates from confirmed settings and complete transactions", async () => {
+test("provider exposes a session-owned account balance settings save", async () => {
   const source = await readFile("src/components/FinanceDataProvider.tsx", "utf8");
   assert.match(source, /saveAccountBalanceSettings: \(settings: AccountBalanceSettingsInput\)/);
   assert.match(source, /\(userId\) => repository\.saveAccountBalanceSettings\(userId, settings\)/);
   assert.match(source, /setAccountBalanceSettings/);
-  assert.match(source, /calculateCompleteCurrentBalance\(accountBalanceSettings, transactions, transactionsComplete\)/);
-  assert.match(source, /\[accountBalanceSettings, transactions, transactionsComplete\]/);
+  // Hydration prerequisites and recalculation are exercised by finance-provider-availability.test.mts.
   assert.match(source, /currentUserIdRef\.current/);
   assert.match(source, /accountGenerationRef\.current === expectedGeneration/);
   assert.doesNotMatch(source, /upsertAccountBalanceSettings/);

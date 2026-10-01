@@ -12,8 +12,19 @@ export function analyzeDecimal(value: number, field = "value"): DecimalAnalysis 
   if (!match) throw new FinanceError("validation_error", { field, reason: "invalid_format" });
   const fraction = match[2] ?? "";
   const exponent = Number(match[3] ?? 0);
-  let digits = `${match[1]}${fraction}`.replace(/^0+(?=\d)/, "");
+  return analyzeDecimalParts(negative, match[1], fraction, exponent);
+}
+
+export function analyzeDecimalText(value: string, field: string): DecimalAnalysis {
+  const match = value.trim().match(/^([+-]?)(\d+)(?:[.,](\d+))?$/);
+  if (!match) throw new FinanceError("validation_error", { field, reason: "invalid_format" });
+  return analyzeDecimalParts(match[1] === "-", match[2], match[3] ?? "");
+}
+
+function analyzeDecimalParts(negative: boolean, integer: string, fraction: string, exponent = 0): DecimalAnalysis {
+  let digits = `${integer}${fraction}`.replace(/^0+(?=\d)/, "");
   let scale = fraction.length - exponent;
+  if (digits === "0") return { negative, zero: true, digits, scale: 0, integerDigits: 1, unscaled: BigInt(0) };
   if (scale < 0) { digits += "0".repeat(-scale); scale = 0; }
   while (scale > 0 && digits.endsWith("0")) { digits = digits.slice(0, -1); scale -= 1; }
   digits = digits.replace(/^0+(?=\d)/, "") || "0";
@@ -21,7 +32,10 @@ export function analyzeDecimal(value: number, field = "value"): DecimalAnalysis 
 }
 
 export function validateMoney(value: number, field: string, sign: "positive" | "nonnegative" | "any"): void {
-  const decimal = analyzeDecimal(value, field);
+  validateMoneyDecimal(analyzeDecimal(value, field), field, sign);
+}
+
+export function validateMoneyDecimal(decimal: DecimalAnalysis, field: string, sign: "positive" | "nonnegative" | "any"): void {
   validateSign(decimal, field, sign);
   if (decimal.scale > MONEY_DECIMAL_SCALE || decimal.integerDigits > 14 || decimal.unscaled * BigInt(10) ** BigInt(MONEY_DECIMAL_SCALE - decimal.scale) > MAX_SAFE_MONEY_COEFFICIENT) invalid(field);
 }
@@ -48,7 +62,10 @@ export function multiplyInvestmentValue(quantity: number, price: number): number
 }
 
 function validateNumeric30(value: number, field: string): void {
-  const decimal = analyzeDecimal(value, field); validateSign(decimal, field, "positive");
+  validateInvestmentDecimal(analyzeDecimal(value, field), field);
+}
+export function validateInvestmentDecimal(decimal: DecimalAnalysis, field: string): void {
+  validateSign(decimal, field, "positive");
   if (decimal.scale > 12 || decimal.integerDigits > 18 || decimal.unscaled > MAX_SAFE) invalid(field);
 }
 function validateSign(decimal: DecimalAnalysis, field: string, sign: "positive" | "nonnegative" | "any") {

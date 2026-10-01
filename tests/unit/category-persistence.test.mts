@@ -66,7 +66,7 @@ test("update mapper emits only database-editable fields", () => {
   });
 });
 
-type Response = { data: unknown; error: { code?: string; message?: string } | null };
+type Response = { count?: number | null; data: unknown; error: { code?: string; message?: string } | null };
 
 function createFakeClient(options: {
   userId?: string | null;
@@ -75,12 +75,13 @@ function createFakeClient(options: {
   singleResponse?: Response;
 } = {}) {
   const calls: Array<{ method: string; args: readonly unknown[] }> = [];
-  const listResponse = options.listResponse ?? { data: [row], error: null };
+  const listResponse = options.listResponse ?? { data: [row], error: null, count: 1 };
   const singleResponse = options.singleResponse ?? { data: row, error: null };
   const query = {
     select(...args: readonly unknown[]) { calls.push({ method: "select", args }); return query; },
     eq(...args: readonly unknown[]) { calls.push({ method: "eq", args }); return query; },
     is(...args: readonly unknown[]) { calls.push({ method: "is", args }); return query; },
+    range(...args: readonly unknown[]) { calls.push({ method: "range", args }); return query; },
     order(...args: readonly unknown[]) { calls.push({ method: "order", args }); return query; },
     insert(...args: readonly unknown[]) { calls.push({ method: "insert", args }); return query; },
     update(...args: readonly unknown[]) { calls.push({ method: "update", args }); return query; },
@@ -116,20 +117,45 @@ test("lists active categories with deterministic ordering", async () => {
   assert.deepEqual(context.calls, [
     { method: "getUser", args: [] },
     { method: "from", args: ["categories"] },
-    { method: "select", args: [categoryProjection] },
+    { method: "select", args: [categoryProjection, { count: "exact" }] },
     { method: "eq", args: ["user_id", "authenticated-user"] },
     { method: "is", args: ["archived_at", null] },
     { method: "order", args: ["type", { ascending: true }] },
     { method: "order", args: ["normalized_name", { ascending: true }] },
     { method: "order", args: ["id", { ascending: true }] },
+    { method: "range", args: [0, 199] },
   ]);
 });
 
 test("explicit all-categories listing includes archived rows", async () => {
-  const context = createFakeClient({ listResponse: { data: [{ ...row, archived_at: "2026-09-12T10:00:00Z" }], error: null } });
+  const context = createFakeClient({ listResponse: { data: [{ ...row, archived_at: "2026-09-12T10:00:00Z" }], error: null, count: 1 } });
   assert.equal((await context.repository.listAllCategories())[0]?.archivedAt, "2026-09-12T10:00:00Z");
   assert.equal(context.calls.some((call) => call.method === "is"), false);
 });
+
+for (const method of ["listCategories", "listAllCategories"] as const) {
+  for (const count of [undefined, null, NaN, -1, 0, 2, Number.MAX_SAFE_INTEGER + 1]) {
+    test(`${method} rejects incomplete or invalid count ${String(count)}`, async () => {
+      const context = createFakeClient({ listResponse: { data: [row], error: null, count } });
+      await assert.rejects(context.repository[method](), error => error instanceof FinanceError
+        && error.code === "repository_unavailable" && error.details?.reason === "incomplete_collection");
+      assert.deepEqual(context.calls.find(call => call.method === "select")?.args, [categoryProjection, { count: "exact" }]);
+      assert.equal(context.calls.filter(call => call.method === "from").length, count === 2 ? 2 : 1);
+      assert.equal(context.calls.some(call => call.method === "is"), method === "listCategories");
+    });
+  }
+
+  test(`${method} accepts complete empty categories`, async () => {
+    const context = createFakeClient({ listResponse: { data: [], error: null, count: 0 } });
+    assert.deepEqual(await context.repository[method](), []);
+  });
+
+  test(`${method} preserves query errors before completeness validation`, async () => {
+    const context = createFakeClient({ listResponse: { data: null, error: { code: "42501", message: "private backend details" } } });
+    await assert.rejects(context.repository[method](), error => error instanceof FinanceError
+      && error.code === "ownership_denied" && error.message === "ownership_denied" && error.details === undefined);
+  });
+}
 
 test("create uses the authenticated user and exact safe payload", async () => {
   const context = createFakeClient({ userId: "session-user", singleResponse: { data: { ...row, user_id: "session-user" }, error: null } });

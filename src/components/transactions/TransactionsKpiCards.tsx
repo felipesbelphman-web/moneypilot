@@ -7,18 +7,21 @@ import { useLanguage, type Language } from "@/components/LanguageProvider";
 import type { Transaction } from "@/components/transactions/transaction-model";
 import { translations } from "@/i18n/translations";
 import { getLocalCivilDateISO, isCivilDateInRange, subtractCivilDays } from "@/lib/dates/civil-date";
-import { calculateTransactionKpiAggregates } from "@/components/transactions/transaction-period-aggregates";
+import type { TransactionKpiAggregates } from "@/components/transactions/transaction-period-aggregates";
 import { localizeTransactionCategory } from "@/components/transactions/transaction-presentation";
+
+import type { FinanceResourceStatus } from "@/lib/persistence/finance-resource-status";
+import { transactionAvailabilityCopy } from "./transactions-view-state";
 
 const iconRoot = "/moneypilot/transactions/icons";
 
 type TransactionsKpiCardsProps = {
-  transactions: Transaction[];
-  selectedMonth: string;
+  aggregates: TransactionKpiAggregates | null;
   mobile?: boolean;
+  status: FinanceResourceStatus;
 };
 
-export function TransactionsKpiCards({ transactions, selectedMonth, mobile = false }: TransactionsKpiCardsProps) {
+export function TransactionsKpiCards({ aggregates, status, mobile = false }: TransactionsKpiCardsProps) {
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
   const t = translations[language].appTransactions;
@@ -31,20 +34,22 @@ export function TransactionsKpiCards({ transactions, selectedMonth, mobile = fal
       : language === "nl" ? { noTransactions: "Nog geen transacties", recentZero: "Geen uit deze periode in de afgelopen 7 dagen", recentOne: "1 uit deze periode in de afgelopen 7 dagen", recentMany: (count: number) => `${count} uit deze periode in de afgelopen 7 dagen`, incomeRatio: (value: string) => `${value}% van het inkomen`, noIncome: "Nog geen inkomensgegevens", previousChange: (value: string) => `${value}% t.o.v. vorige maand`, noPrevious: "Geen vergelijking met vorige maand", noTrend: "Nog geen gegevens", addForTrends: "Voeg transacties toe om trends te zien", trendDetail: (amount: string, change: string) => `${amount} • +${change}% t.o.v. vorige maand`, notCalculated: "Nog niet berekend" }
       : language === "it" ? { noTransactions: "Nessuna transazione per ora", recentZero: "Nessuna di questo periodo negli ultimi 7 giorni", recentOne: "1 di questo periodo negli ultimi 7 giorni", recentMany: (count: number) => `${count} di questo periodo negli ultimi 7 giorni`, incomeRatio: (value: string) => `${value}% delle entrate`, noIncome: "Nessun dato sulle entrate", previousChange: (value: string) => `${value}% rispetto al mese precedente`, noPrevious: "Nessun confronto con il mese precedente", noTrend: "Nessun dato", addForTrends: "Aggiungi transazioni per vedere le tendenze", trendDetail: (amount: string, change: string) => `${amount} • +${change}% rispetto al mese precedente`, notCalculated: "Non ancora calcolato" }
       : { noTransactions: "No transactions yet", recentZero: "None from this period in the last 7 days", recentOne: "1 from this period in the last 7 days", recentMany: (count: number) => `${count} from this period in the last 7 days`, incomeRatio: (value: string) => `${value}% of income`, noIncome: "No income data yet", previousChange: (value: string) => `${value}% vs previous month`, noPrevious: "No previous month comparison", noTrend: "No data yet", addForTrends: "Add transactions to see spending trends", trendDetail: (amount: string, change: string) => `${amount} • +${change}% vs previous month`, notCalculated: "Not calculated yet" };
-  const aggregates = calculateTransactionKpiAggregates(transactions, selectedMonth);
-  const monthTransactions = aggregates.monthTransactions;
-  const recentCount = countLastSevenDays(monthTransactions);
-  const recentDetail = recentCount === 0 ? copy.recentZero : recentCount === 1 ? copy.recentOne : copy.recentMany(recentCount);
-  const incomeDetail = aggregates.available && aggregates.incomeUsage.available ? copy.incomeRatio(formatPercentage(aggregates.incomeUsage.value, language)) : copy.noIncome;
-  const previousDetail = aggregates.available && aggregates.expenseVariation.available ? copy.previousChange(formatSignedPercentage(aggregates.expenseVariation.value, language)) : copy.noPrevious;
-  const spendDetail = aggregates.available && aggregates.incomeUsage.available ? `${incomeDetail} • ${previousDetail}` : incomeDetail;
-  const categoryTrend = aggregates.categoryAggregationAvailable ? aggregates.risingCategory : null;
+  const transactionsReady = status.status === "ready" && aggregates !== null;
+  const availabilityCopy = transactionAvailabilityCopy[language];
+  const unavailableMessage = status.status === "loading" ? availabilityCopy.loading : availabilityCopy.error;
+  const monthTransactions = aggregates?.monthTransactions;
+  const recentCount = monthTransactions ? countLastSevenDays(monthTransactions) : null;
+  const recentDetail = recentCount === 0 ? copy.recentZero : recentCount === 1 ? copy.recentOne : copy.recentMany(recentCount ?? 0);
+  const incomeDetail = aggregates?.available && aggregates.incomeUsage.available ? copy.incomeRatio(formatPercentage(aggregates.incomeUsage.value, language)) : copy.noIncome;
+  const previousDetail = aggregates?.available && aggregates.expenseVariation.available ? copy.previousChange(formatSignedPercentage(aggregates.expenseVariation.value, language)) : copy.noPrevious;
+  const spendDetail = aggregates?.available && aggregates.incomeUsage.available ? `${incomeDetail} • ${previousDetail}` : incomeDetail;
+  const categoryTrend = aggregates?.categoryComparisonAvailable ? aggregates.risingCategory : null;
   const cards = [
-    { title: t.movements, value: String(monthTransactions.length), detail: recentDetail, compactValue: false, color: "#3B82F6", icon: `${iconRoot}/receipt-outline.svg` },
-    { title: t.monthlySpend, value: aggregates.available ? money(aggregates.expenses) : "—", detail: spendDetail, compactValue: false, color: "#F43F5E", icon: `${iconRoot}/trending-down-outline.svg` },
-    { title: t.variableSpendRising, value: categoryTrend ? localizeTransactionCategory(categoryTrend.category, language) : copy.noTrend, detail: categoryTrend ? copy.trendDetail(money(categoryTrend.amount), formatPercentage(categoryTrend.growth, language)) : copy.addForTrends, compactValue: true, color: "#8B5CF6", icon: `${iconRoot}/pricetag-outline.svg` },
+    { title: t.movements, value: monthTransactions ? String(monthTransactions.length) : "—", detail: recentDetail, compactValue: false, color: "#3B82F6", icon: `${iconRoot}/receipt-outline.svg` },
+    { title: t.monthlySpend, value: aggregates?.available ? money(aggregates.expenses) : "—", detail: spendDetail, compactValue: false, color: "#F43F5E", icon: `${iconRoot}/trending-down-outline.svg` },
+    { title: t.variableSpendRising, value: categoryTrend ? localizeTransactionCategory(categoryTrend.category, language) : aggregates?.categoryComparisonAvailable ? copy.noTrend : "—", detail: categoryTrend ? copy.trendDetail(money(categoryTrend.amount), formatPercentage(categoryTrend.growth, language)) : aggregates?.categoryComparisonAvailable ? copy.addForTrends : copy.notCalculated, compactValue: true, color: "#8B5CF6", icon: `${iconRoot}/pricetag-outline.svg` },
     { title: t.availableToSpend, value: "—", detail: copy.notCalculated, compactValue: false, color: "#22C55E", icon: "/moneypilot/dashboard-safe-to-spend-icon.svg" },
-  ];
+  ].map(card => transactionsReady ? card : { ...card, value: "—", detail: unavailableMessage });
   return (
     <div data-transactions-kpis={mobile ? "mobile" : "desktop"} className={mobile ? "grid min-w-0 grid-cols-1 gap-3 min-[420px]:grid-cols-2" : "grid h-[111.017px] min-w-0 max-w-full shrink-0 grid-cols-4 gap-x-[12.503px]"}>
       {cards.map((card) => (

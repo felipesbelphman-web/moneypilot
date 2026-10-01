@@ -72,6 +72,18 @@ export async function settleProfilePreferenceLoad(loader: () => Promise<ProfileP
   }
 }
 
+export type ProfileLoadResult<T> =
+  | { status: "success"; data: T }
+  | { status: "failure"; error: ProfileError };
+
+export async function settleProfileLoad<T>(loader: () => Promise<T>): Promise<ProfileLoadResult<T>> {
+  try {
+    return { status: "success", data: await loader() };
+  } catch (error: unknown) {
+    return { status: "failure", error: mapProfilePersistenceError(error) };
+  }
+}
+
 function isProfileAvatarMode(value: string): value is ProfileAvatarMode {
   return value === "photo" || value === "initials";
 }

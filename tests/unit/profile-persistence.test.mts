@@ -21,6 +21,7 @@ const {
   ProfileError,
   mapProfilePersistenceError,
   profileRowToUserProfile,
+  settleProfileLoad,
   settleProfilePreferenceLoad,
 } = await import("../../src/lib/auth/profile-contract.ts");
 const { ProfileRepository, profileProjection } = await import("../../src/lib/auth/profile-repository.ts");
@@ -203,6 +204,20 @@ test("preserves provider-facing success and distinguishes sanitized technical fa
   assert.equal(failure.status, "failure");
   if (failure.status === "failure") {
     assert.equal(failure.error.code, "unknown_persistence_error");
+    assert.equal(failure.error.message.includes("private"), false);
+  }
+});
+
+test("root account loading returns expected persistence failures instead of throwing", async () => {
+  const success = await settleProfileLoad(async () => null);
+  assert.deepEqual(success, { status: "success", data: null });
+
+  const failure = await settleProfileLoad(async () => {
+    throw new TypeError("private network detail");
+  });
+  assert.equal(failure.status, "failure");
+  if (failure.status === "failure") {
+    assert.equal(failure.error.code, "persistence_unavailable");
     assert.equal(failure.error.message.includes("private"), false);
   }
 });

@@ -69,6 +69,7 @@ function parseRows(text: string, delimiter: string) {
       field += character;
     }
   }
+  if (quoted) throw new Error("csv_unclosed_quote");
   row.push(field.trim());
   if (row.some(Boolean)) rows.push(row);
   return rows;
@@ -105,7 +106,8 @@ export function validateImportedDraft(draft: Pick<ImportedTransactionDraft, "dat
   return errors;
 }
 
-export function parseTransactionCsv(text: string): ImportedTransactionDraft[] {
+export function parseTransactionCsv(text: string, onProgress?: (step: number) => void): ImportedTransactionDraft[] {
+  onProgress?.(1);
   const rows = parseRows(text.replace(/^\uFEFF/, ""), detectDelimiter(text));
   if (rows.length < 2) throw new Error("O CSV precisa conter cabeçalho e pelo menos uma transação.");
   const headers = rows[0].map(normalizeHeader);
@@ -117,13 +119,17 @@ export function parseTransactionCsv(text: string): ImportedTransactionDraft[] {
   const categoryColumn = column("category");
   if (dateColumn < 0 || descriptionColumn < 0 || amountColumn < 0) throw new Error("Não foi possível localizar as colunas de data, descrição e valor.");
 
-  return rows.slice(1).map((row) => {
+  onProgress?.(2);
+  const dataRows = rows.slice(1);
+  const dates = dataRows.map((row) => parseImportedDate(row[dateColumn] ?? ""));
+  onProgress?.(3);
+  const drafts = dataRows.map((row, index) => {
     const rawDate = row[dateColumn] ?? "";
     const rawDescription = row[descriptionColumn] ?? "";
     const rawAmount = row[amountColumn] ?? "";
     const rawType = typeColumn >= 0 ? row[typeColumn] ?? "" : "";
     const rawCategory = categoryColumn >= 0 ? row[categoryColumn] ?? "" : "";
-    const dateISO = parseImportedDate(rawDate);
+    const dateISO = dates[index];
     const signedAmount = parseImportedAmount(rawAmount);
     const explicitType = rawType ? parseImportedType(rawType) : null;
     const type = rawType ? explicitType : (signedAmount === null || signedAmount === 0 ? null : signedAmount < 0 ? "expense" : "income");
@@ -138,4 +144,6 @@ export function parseTransactionCsv(text: string): ImportedTransactionDraft[] {
       type, amount: signedAmount === null ? null : Math.abs(signedAmount), errors,
     };
   });
+  onProgress?.(4);
+  return drafts;
 }

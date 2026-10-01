@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
+import { AccountAvatar } from "@/components/profile/AccountAvatar";
+import { investmentPresentationCopy } from "@/components/investments/investment-presentation";
+import "./investments.css";
 import { useState } from "react";
-import { DesktopInternalPagePanel, DesktopScaleCanvas } from "@/components/DesktopScaleCanvas";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useFinanceData } from "@/components/FinanceDataProvider";
 import { InvestmentAssetsList } from "@/components/investments/InvestmentAssetsList";
@@ -9,9 +12,10 @@ import { InvestmentPerformanceChart, type InvestmentRange } from "@/components/i
 import { PortfolioAllocationChart } from "@/components/investments/PortfolioAllocationChart";
 import { ManualInvestmentModal } from "@/components/investments/ManualInvestmentModal";
 
+import { areFinanceResourcesReady } from "@/lib/persistence/finance-resource-status";
+
 const iconRoot = "/moneypilot/investments/icons";
-const card = "overflow-hidden rounded-[18px] border border-[#28313B] bg-[#080B0F]/20 shadow-[0_6px_14px_rgba(0,0,0,0.2)]";
-const summaryStyles = [{ icon: "wallet-outline", color: "#3B82F6" }, { icon: "trending-up-outline", color: "#22C55E" }, { icon: "pulse-outline", color: "#22C55E" }, { icon: "shield-checkmark-outline", color: "#F59E0B" }];
+const summaryStyles = [{ icon: "wallet-outline", tone: "blue" }, { icon: "trending-up-outline", tone: "positive" }, { icon: "pulse-outline", tone: "positive" }, { icon: "shield-checkmark-outline", tone: "warning" }];
 
 const copy = {
   en: { title: "Investments", description: "Understand risk, protect your goals and decide your next contribution with more context.", filters: ["All", "Stocks", "Crypto"], summary: "Investment summary", metrics: [{ label: "Invested assets", value: "—", detail: "No investment data yet" }, { label: "Total return", value: "—", detail: "Not calculated yet" }, { label: "Available cash", value: "—", detail: "No investment cash data" }, { label: "Portfolio risk", value: "Not available", detail: "Add investment data to assess portfolio risk." }], performance: "Portfolio performance", noPerformance: "No performance data yet", performanceHelp: "Performance will appear when investment data is available.", allocation: "Portfolio allocation", noAllocation: "No allocation data yet", allocationHelp: "Add assets to see your portfolio allocation.", assets: "Your assets", noAssets: "No investment assets yet", assetsHelp: "Add investment data to build your portfolio.", contribution: "Before the next contribution", noContribution: "No contribution review yet", contributionHelp: "Investment guidance will appear when portfolio data is available.", criteria: "View criteria →", insight: "Investment insight", noInsights: "No insights yet", insightsHelp: "Add investment data to start analysis.", decisions: "Priority decisions", noDecisions: "No decisions yet", decisionsHelp: "Decisions will appear when MoneyPilot has enough investment data.", avatar: "User avatar" },
@@ -26,63 +30,68 @@ const extendedCopy = {
   it: { ...copy.en, title: "Investimenti", description: "Comprendi il rischio, proteggi i tuoi obiettivi e prepara il prossimo versamento.", filters: ["Tutti", "Azioni", "Cripto"], summary: "Riepilogo investimenti", metrics: [{ label: "Patrimonio investito", value: "—", detail: "Nessun dato sugli investimenti" }, { label: "Rendimento totale", value: "—", detail: "Non ancora calcolato" }, { label: "Liquidità disponibile", value: "—", detail: "Nessun dato sulla liquidità" }, { label: "Rischio del portafoglio", value: "Non disponibile", detail: "Aggiungi dati per valutare il rischio del portafoglio." }], performance: "Andamento del portafoglio", noPerformance: "Nessun dato sull’andamento", performanceHelp: "L’andamento apparirà quando saranno disponibili dati.", allocation: "Allocazione del portafoglio", noAllocation: "Nessun dato sull’allocazione", allocationHelp: "Aggiungi asset per vedere l’allocazione del portafoglio.", assets: "I tuoi asset", noAssets: "Nessun asset di investimento", assetsHelp: "Aggiungi dati per creare il tuo portafoglio.", contribution: "Prima del prossimo versamento", noContribution: "Nessuna revisione disponibile", contributionHelp: "Le indicazioni appariranno quando saranno disponibili dati.", criteria: "Vedi criteri →", insight: "Analisi degli investimenti", noInsights: "Nessuna analisi", insightsHelp: "Aggiungi dati sugli investimenti per iniziare l’analisi.", decisions: "Decisioni prioritarie", noDecisions: "Nessuna decisione", decisionsHelp: "Le decisioni appariranno con dati sufficienti.", avatar: "Avatar utente" },
 };
 
-function Glyph({ name, color }: { name: string; color: string }) { return <span aria-hidden className="block size-[18px] shrink-0" style={{ backgroundColor: color, WebkitMask: `url(${iconRoot}/${name}.svg) center/contain no-repeat`, mask: `url(${iconRoot}/${name}.svg) center/contain no-repeat` }} />; }
-function Empty({ title, detail }: { title: string; detail: string }) { return <div className="flex h-full flex-col items-center justify-center px-[16px] text-center"><strong className="text-[10px]">{title}</strong><p className="mt-[5px] text-[8.5px] text-[#9CA6B2]">{detail}</p></div>; }
+function Glyph({ name }: { name: string }) {
+  return <span aria-hidden="true" className="investment-glyph" style={{ WebkitMask: `url(${iconRoot}/${name}.svg) center/contain no-repeat`, mask: `url(${iconRoot}/${name}.svg) center/contain no-repeat` }} />;
+}
+function Empty({ title, detail }: { title: string; detail: string }) {
+  return <div className="investment-empty"><strong>{title}</strong><p>{detail}</p></div>;
+}
 
 export default function InvestmentsPage() {
   const { language } = useLanguage();
-const { investments, upsertInvestment } = useFinanceData();
-const t = extendedCopy[language];
-const [filter, setFilter] = useState(0);
-const [manualModalOpen, setManualModalOpen] = useState(false);
-
-const visibleInvestments = investments.filter((investment) => {
-  if (filter === 1) {
-    return investment.assetType === "stock" || investment.assetType === "etf";
-  }
-
-  if (filter === 2) {
-    return investment.assetType === "crypto";
-  }
-
-  return true;
-});
+  const { investments, upsertInvestment, resourceStatuses } = useFinanceData();
+  const t = extendedCopy[language];
+  const ui = investmentPresentationCopy[language];
+  const [filter, setFilter] = useState(0);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
+  const investmentsReady = areFinanceResourcesReady(resourceStatuses, ["investments"]);
+  const isLoading = resourceStatuses.investments.status === "loading";
+  const visibleInvestments = investmentsReady ? investments.filter((investment) => {
+    if (filter === 1) return investment.assetType === "stock" || investment.assetType === "etf";
+    if (filter === 2) return investment.assetType === "crypto";
+    return true;
+  }) : null;
+  // No FX source exists: never combine currencies into a portfolio total.
+  const mixedCurrencies = investmentsReady && new Set(investments.map(investment => investment.nativeCurrency)).size > 1;
   const ranges: InvestmentRange[] = ["7D", "1M", "3M", "1A"];
-  return <main className="min-h-screen bg-[#080B0F] font-[Inter] text-[#F5F7FA]"><DesktopScaleCanvas><div className="relative h-[1024px] w-[1536px] overflow-hidden"><DesktopInternalPagePanel><div className="flex h-[767.623px] w-[1098px] flex-col gap-[12px]">
-    <header className="flex h-[57.92px] shrink-0 items-center justify-between"><div className="flex h-[52px] w-[610px] flex-col justify-center gap-[4px]"><h1 className="text-[23.168px] font-semibold leading-none">{t.title}</h1><p className="text-[13.2px] text-[#9CA6B2]">{t.description}</p></div><div className="flex h-[52px] items-center gap-[16px]"><div className="flex h-[46px] w-[252px] items-center justify-center rounded-[23px] border border-[#28313B] bg-[#080B0F]/34 p-[4px]">{t.filters.map((item, index) => <button key={item} type="button" onClick={() => setFilter(index)} className={`h-[38px] w-[80px] rounded-[19px] text-[10.5px] font-medium ${filter === index ? "bg-[#3B82F6] text-[#F5F7FA]" : "text-[#9CA6B2]"}`}>{item}</button>)}</div>
-    <button
-      type="button"
-      onClick={() => setManualModalOpen(true)}
-      className="flex h-[40px] items-center justify-center rounded-[20px] bg-[#3B82F6] px-[18px] text-[10.5px] font-semibold text-white transition hover:bg-[#2563EB]"
-    >
-      + Add investment
-    </button>
-   </div></header>
-    <section aria-label={t.summary} className="flex h-[100px] shrink-0 gap-[12px]">{t.metrics.map((metric, index) => <article key={metric.label} className={`${card} flex h-[100px] w-[265.5px] shrink-0 flex-col gap-[6px] px-[12px] py-[10px]`}><div className="flex h-[30px] items-center gap-[8px]"><span className="flex size-[30px] items-center justify-center rounded-[9px] border" style={{ borderColor: summaryStyles[index].color, backgroundColor: `${summaryStyles[index].color}24` }}><Glyph name={summaryStyles[index].icon} color={summaryStyles[index].color} /></span><h2 className="text-[11px] font-semibold">{metric.label}</h2></div><strong className="text-[18px] font-semibold leading-none">{metric.value}</strong><p className="truncate text-[9px] text-[#9CA6B2]">{metric.detail}</p></article>)}</section>
-    <section className="flex h-[185px] shrink-0 gap-[12px]"><article className={`${card} h-[185px] w-[677px] shrink-0 px-[12px] py-[10px]`}><div className="flex h-[24px] items-center justify-between"><h2 className="text-[14px] font-semibold">{t.performance}</h2><div className="flex gap-[4px]">{ranges.map((item) => <button key={item} type="button" disabled className={`h-[24px] rounded-[12px] border border-[#28313B] bg-[#080B0F]/24 text-[8px] text-[#64707D] disabled:cursor-not-allowed ${item === "1A" ? "w-[48px]" : "w-[40px]"}`}>{item}</button>)}</div></div><InvestmentPerformanceChart title={t.noPerformance} detail={t.performanceHelp} /></article><article className={`${card} h-[185px] w-[409px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.allocation}</h2><PortfolioAllocationChart title={t.noAllocation} detail={t.allocationHelp} /></article></section>
-    <section className="flex h-[185px] shrink-0 gap-[12px]"><article className={`${card} h-[185px] w-[677px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.assets}</h2><div className="h-[145px]">
-  <InvestmentAssetsList
-    investments={visibleInvestments}
-    emptyTitle={t.noAssets}
-    emptyDetail={t.assetsHelp}
-  />
-</div></article><article className={`${card} h-[185px] w-[409px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.contribution}</h2><div className="h-[125px]"><Empty title={t.noContribution} detail={t.contributionHelp} /></div><button type="button" disabled className="flex h-[18px] w-full cursor-not-allowed items-center justify-end text-[8.5px] font-semibold text-[#64707D]">{t.criteria}</button></article></section>
-    <section className="flex h-[143px] shrink-0 gap-[12px]"><article className={`${card} h-[143px] w-[409px] px-[12px] py-[10px]`}><h2 className="flex h-[24px] items-center gap-[7px] text-[14px] font-semibold"><Glyph name="sparkles-outline" color="#3B82F6" />{t.insight}</h2><div className="h-[99px]"><Empty title={t.noInsights} detail={t.insightsHelp} /></div></article><article className={`${card} h-[143px] w-[677px] px-[12px] py-[10px]`}><h2 className="text-[14px] font-semibold">{t.decisions}</h2><div className="h-[103px]"><Empty title={t.noDecisions} detail={t.decisionsHelp} /></div></article></section>
-  </div></DesktopInternalPagePanel></div></DesktopScaleCanvas>
-
-<ManualInvestmentModal
-  open={manualModalOpen}
-  onClose={() => setManualModalOpen(false)}
-  onSubmit={async (draft) => {
-    await upsertInvestment({
-      ...draft,
-      id: crypto.randomUUID(),
-      priceMode: "manual",
-      marketAssetKey: null,
-    });
-    setManualModalOpen(false);
-  }}
-/>
-
-</main>;
+  return <div data-investments-page aria-busy={isLoading}>
+    <div className="investments-layout">
+      <div className="investments-brand"><Image src="/moneypilot/dashboard/day/logomark.svg" alt="" width={37} height={37} /><span>MoneyPilot</span></div>
+      <header className="investments-header">
+        <div><h1>{t.title}</h1><p>{t.description}</p></div>
+        <div className="investments-header-actions"><div className="investments-filters" role="group" aria-label={ui.assetType}>
+          {t.filters.map((item, index) => <button key={item} type="button" aria-pressed={filter === index} onClick={() => setFilter(index)}>{item}</button>)}
+        </div><AccountAvatar size={52} /></div>
+      </header>
+      {!investmentsReady && !isLoading && <p role="alert" className="investments-state">{ui.loadError}</p>}
+      {isLoading ? <div role="status" className="investments-loading">{ui.loading}</div> : visibleInvestments !== null ? <>
+        {mixedCurrencies && <div role="status" className="investments-state"><strong>{ui.partial}</strong><p>{ui.partialHelp}</p></div>}
+        <section aria-label={t.summary} className="investments-summary">
+          {t.metrics.map((metric, index) => <article key={metric.label} className="investment-card investment-metric">
+            <div><span className={`investment-metric-icon investment-tone-${summaryStyles[index].tone}`}><Glyph name={summaryStyles[index].icon} /></span><h2>{metric.label}</h2></div>
+            <strong>{index === 3 ? ui.comingSoon : metric.value}</strong>
+            <p>{index === 3 ? ui.unavailable : investments.length ? ui.unavailable : metric.detail}</p>
+          </article>)}
+        </section>
+        <section className="investments-row">
+          <article className="investment-card"><header><h2>{t.performance}</h2><div className="investment-ranges">{ranges.map(item => <button key={item} type="button" disabled>{item}</button>)}</div></header><InvestmentPerformanceChart title={t.noPerformance} detail={t.performanceHelp} /></article>
+          <article className="investment-card"><h2>{t.allocation}</h2><PortfolioAllocationChart title={t.noAllocation} detail={t.allocationHelp} /></article>
+        </section>
+        <section className="investments-row">
+          <article className="investment-card"><header><h2>{t.assets}</h2><button type="button" className="investment-primary" onClick={() => setManualModalOpen(true)}>{ui.add}</button></header>
+            <InvestmentAssetsList investments={visibleInvestments} emptyTitle={investments.length ? ui.noResults : t.noAssets} emptyDetail={investments.length ? ui.noResultsHelp : t.assetsHelp} />
+          </article>
+          <article className="investment-card"><h2>{t.contribution}</h2><Empty title={t.noContribution} detail={t.contributionHelp} /><button type="button" disabled className="investment-criteria">{t.criteria}</button></article>
+        </section>
+        <section className="investments-row investments-row-reversed">
+          <article className="investment-card"><h2 className="investment-ai"><Glyph name="sparkles-outline" />{ui.ai}</h2><Empty title={t.noInsights} detail={t.insightsHelp} /></article>
+          <article className="investment-card"><h2>{t.decisions}</h2><Empty title={t.noDecisions} detail={t.decisionsHelp} /><p className="investment-planned">{ui.tracking}<span>{ui.planned}</span></p></article>
+        </section>
+      </> : null}
+    </div>
+    <ManualInvestmentModal open={manualModalOpen} onClose={() => setManualModalOpen(false)} onSubmit={async (draft) => {
+      await upsertInvestment({ ...draft, id: crypto.randomUUID(), priceMode: "manual", marketAssetKey: null });
+      setManualModalOpen(false);
+    }} />
+  </div>;
 }

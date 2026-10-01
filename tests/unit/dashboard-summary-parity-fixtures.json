@@ -1,0 +1,2405 @@
+[
+  {
+    "input": {
+      "transactions": [],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [],
+      "transactionCount": 0,
+      "incomeTransactionCount": 0,
+      "expenseTransactionCount": 0,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": false,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": false,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 0,
+      "incomeAveragePerDay": 0,
+      "largestIncome": null,
+      "expenses": 0,
+      "netCashFlow": 0,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [],
+      "topSpendingCategory": null,
+      "safeSavingsCapacity": 0,
+      "primaryGoal": null,
+      "monthlyStatus": "no_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 3,
+      "incomeTransactionCount": 2,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 130,
+      "incomeAveragePerDay": 6.666666666666667,
+      "largestIncome": 100,
+      "expenses": 20,
+      "netCashFlow": 110,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [
+        {
+          "category": "Food",
+          "amount": 20,
+          "percentage": 1
+        }
+      ],
+      "topSpendingCategory": {
+        "category": "Food",
+        "amount": 20,
+        "percentage": 1
+      },
+      "safeSavingsCapacity": 0,
+      "primaryGoal": null,
+      "monthlyStatus": "no_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "category": "Food",
+          "subtitle": "Food",
+          "budget": 200,
+          "month": "2026-09",
+          "color": "#000"
+        }
+      ],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 3,
+      "incomeTransactionCount": 2,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": 200,
+      "budgetSpentTotal": 20,
+      "remainingBudget": 180,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": true,
+          "hasOverlappingCategories": false,
+          "plannedTotal": 200,
+          "spentTotal": 20,
+          "percent": 10
+        },
+        "plannedTotal": 200,
+        "spentTotal": 20,
+        "remainingBudget": 180,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": 0.1,
+        "budgetUsedPercent": 10,
+        "projectedTotal": 40,
+        "projectedDifference": -160,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 20,
+        "remainingSpendTarget": 180,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 200,
+        "spentTotal": 20,
+        "remainingBudget": 180,
+        "projectedTotal": 40,
+        "projectedDifference": -160,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 160,
+        "safeMonthlyCapacity": 80,
+        "source": "budget_headroom",
+        "canContribute": true
+      },
+      "hasTransactions": true,
+      "hasBudgets": true,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 130,
+      "incomeAveragePerDay": 6.666666666666667,
+      "largestIncome": 100,
+      "expenses": 20,
+      "netCashFlow": 110,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [
+        {
+          "category": "Food",
+          "amount": 20,
+          "percentage": 1
+        }
+      ],
+      "topSpendingCategory": {
+        "category": "Food",
+        "amount": 20,
+        "percentage": 1
+      },
+      "safeSavingsCapacity": 80,
+      "primaryGoal": null,
+      "monthlyStatus": "within_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "category": "Food",
+          "subtitle": "Food",
+          "budget": 200,
+          "month": "2026-09",
+          "color": "#000"
+        }
+      ],
+      "budgetAdjustments": {},
+      "goals": [
+        {
+          "id": "g",
+          "name": "Synthetic goal",
+          "savedAmount": 10,
+          "targetAmount": 1000,
+          "targetDate": "2027-09",
+          "priority": "primary"
+        }
+      ],
+      "goalContributionPlans": {
+        "g": {
+          "goalId": "g",
+          "monthlyTarget": 50,
+          "baselineRequiredMonthlyContribution": 25,
+          "savingsBoost": 25,
+          "createdAt": "2026-09-01T00:00:00Z"
+        }
+      },
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 3,
+      "incomeTransactionCount": 2,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": 200,
+      "budgetSpentTotal": 20,
+      "remainingBudget": 180,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": true,
+          "hasOverlappingCategories": false,
+          "plannedTotal": 200,
+          "spentTotal": 20,
+          "percent": 10
+        },
+        "plannedTotal": 200,
+        "spentTotal": 20,
+        "remainingBudget": 180,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": 0.1,
+        "budgetUsedPercent": 10,
+        "projectedTotal": 40,
+        "projectedDifference": -160,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 20,
+        "remainingSpendTarget": 180,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 200,
+        "spentTotal": 20,
+        "remainingBudget": 180,
+        "projectedTotal": 40,
+        "projectedDifference": -160,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 160,
+        "safeMonthlyCapacity": 80,
+        "source": "budget_headroom",
+        "canContribute": true
+      },
+      "hasTransactions": true,
+      "hasBudgets": true,
+      "hasGoals": true,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 130,
+      "incomeAveragePerDay": 6.666666666666667,
+      "largestIncome": 100,
+      "expenses": 20,
+      "netCashFlow": 110,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [
+        {
+          "category": "Food",
+          "amount": 20,
+          "percentage": 1
+        }
+      ],
+      "topSpendingCategory": {
+        "category": "Food",
+        "amount": 20,
+        "percentage": 1
+      },
+      "safeSavingsCapacity": 80,
+      "primaryGoal": {
+        "goal": {
+          "id": "g",
+          "name": "Synthetic goal",
+          "savedAmount": 10,
+          "targetAmount": 1000,
+          "targetDate": "2027-09",
+          "priority": "primary"
+        },
+        "calculation": {
+          "available": true,
+          "unavailableReason": null,
+          "remainingAmount": 990,
+          "progressRatio": 0.01,
+          "actualProgressPercent": 1,
+          "progressPercent": 1,
+          "visualProgressPercent": 1,
+          "monthsRemaining": 12,
+          "requiredMonthlyContribution": 82.5,
+          "isCompleted": false,
+          "isPastDue": false,
+          "isDueThisMonth": false
+        },
+        "contributionPlan": {
+          "goalId": "g",
+          "monthlyTarget": 50,
+          "baselineRequiredMonthlyContribution": 25,
+          "savingsBoost": 25,
+          "createdAt": "2026-09-01T00:00:00Z"
+        },
+        "isContributionPlanStale": true
+      },
+      "monthlyStatus": "within_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "category": "Food",
+          "subtitle": "Food",
+          "budget": 200,
+          "month": "2026-09",
+          "color": "#000"
+        }
+      ],
+      "budgetAdjustments": {
+        "2026-09": {
+          "month": "2026-09",
+          "targetRemainingSpend": 40,
+          "baselineProjectedTotal": 400,
+          "adjustmentNeeded": 200,
+          "suggestedWeeklyReduction": 50
+        }
+      },
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 3,
+      "incomeTransactionCount": 2,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": 200,
+      "budgetSpentTotal": 20,
+      "remainingBudget": 180,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": true,
+          "hasOverlappingCategories": false,
+          "plannedTotal": 200,
+          "spentTotal": 20,
+          "percent": 10
+        },
+        "plannedTotal": 200,
+        "spentTotal": 20,
+        "remainingBudget": 180,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": 0.1,
+        "budgetUsedPercent": 10,
+        "projectedTotal": 40,
+        "projectedDifference": -160,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 20,
+        "remainingSpendTarget": 180,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 200,
+        "spentTotal": 20,
+        "remainingBudget": 180,
+        "projectedTotal": 40,
+        "projectedDifference": -160,
+        "activeAdjustmentTarget": 40,
+        "rawCapacity": 160,
+        "safeMonthlyCapacity": 80,
+        "source": "active_adjustment",
+        "canContribute": true
+      },
+      "hasTransactions": true,
+      "hasBudgets": true,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 130,
+      "incomeAveragePerDay": 6.666666666666667,
+      "largestIncome": 100,
+      "expenses": 20,
+      "netCashFlow": 110,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [
+        {
+          "category": "Food",
+          "amount": 20,
+          "percentage": 1
+        }
+      ],
+      "topSpendingCategory": {
+        "category": "Food",
+        "amount": 20,
+        "percentage": 1
+      },
+      "safeSavingsCapacity": 80,
+      "primaryGoal": null,
+      "monthlyStatus": "within_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "category": "Food",
+          "subtitle": "Food",
+          "budget": 200,
+          "month": "2026-09",
+          "color": "#000"
+        },
+        {
+          "id": "b2",
+          "category": "Food",
+          "subtitle": "Food",
+          "budget": 200,
+          "month": "2026-09",
+          "color": "#000"
+        }
+      ],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 3,
+      "incomeTransactionCount": 2,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": null,
+      "budgetSpentTotal": null,
+      "remainingBudget": null,
+      "budgetProjection": {
+        "available": false,
+        "unavailableReason": "overlapping_categories",
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": true,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": null,
+        "spentTotal": null,
+        "remainingBudget": null,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": null,
+        "projectedDifference": null,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": null,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": null,
+        "currentRemainingProjectedSpend": null,
+        "remainingSpendTarget": null,
+        "canProject": false
+      },
+      "savingsCapacity": {
+        "available": false,
+        "unavailableReason": "overlapping_categories",
+        "month": "2026-09",
+        "plannedTotal": null,
+        "spentTotal": null,
+        "remainingBudget": null,
+        "projectedTotal": null,
+        "projectedDifference": null,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": null,
+        "safeMonthlyCapacity": null,
+        "source": "unavailable",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": true,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 130,
+      "incomeAveragePerDay": 6.666666666666667,
+      "largestIncome": 100,
+      "expenses": 20,
+      "netCashFlow": 110,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [
+        {
+          "category": "Food",
+          "amount": 20,
+          "percentage": 1
+        }
+      ],
+      "topSpendingCategory": {
+        "category": "Food",
+        "amount": 20,
+        "percentage": 1
+      },
+      "safeSavingsCapacity": null,
+      "primaryGoal": null,
+      "monthlyStatus": "unavailable"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-08",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-08",
+      "monthTransactions": [
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 1,
+      "incomeTransactionCount": 0,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 1,
+        "monthElapsedPercent": 100,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 0,
+        "remainingWeeks": 0,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": false
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-08",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 0,
+      "incomeAveragePerDay": 0,
+      "largestIncome": null,
+      "expenses": 40,
+      "netCashFlow": -40,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [
+        {
+          "category": "Food",
+          "amount": 40,
+          "percentage": 1
+        }
+      ],
+      "topSpendingCategory": {
+        "category": "Food",
+        "amount": 40,
+        "percentage": 1
+      },
+      "safeSavingsCapacity": 0,
+      "primaryGoal": null,
+      "monthlyStatus": "no_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "i",
+          "type": "income",
+          "amount": 100,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "e",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "future",
+          "type": "income",
+          "amount": 30,
+          "dateISO": "2026-09-20",
+          "description": "Synthetic",
+          "category": "Salary",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Salary",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "salary"
+          },
+          "date": "2026-09-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "historic",
+          "type": "expense",
+          "amount": 40,
+          "dateISO": "2026-08-20",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-08-20",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-10",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-10",
+      "monthTransactions": [],
+      "transactionCount": 0,
+      "incomeTransactionCount": 0,
+      "expenseTransactionCount": 0,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0,
+        "monthElapsedPercent": 0,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 31,
+        "remainingWeeks": 4.428571428571429,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": false
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-10",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": false,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 0,
+      "incomeAveragePerDay": null,
+      "largestIncome": null,
+      "expenses": 0,
+      "netCashFlow": 0,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [],
+      "topSpendingCategory": null,
+      "safeSavingsCapacity": 0,
+      "primaryGoal": null,
+      "monthlyStatus": "no_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "x",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": ""
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "x",
+          "type": "expense",
+          "amount": 20,
+          "dateISO": "2026-09-10",
+          "description": "Synthetic",
+          "category": "",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": ""
+          },
+          "date": "2026-09-10",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 1,
+      "incomeTransactionCount": 0,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 0,
+      "incomeAveragePerDay": 0,
+      "largestIncome": null,
+      "expenses": 20,
+      "netCashFlow": -20,
+      "categoryAggregationAvailable": false,
+      "categoryAggregationUnavailableReason": "missing_category",
+      "categorySpending": [],
+      "topSpendingCategory": null,
+      "safeSavingsCapacity": 0,
+      "primaryGoal": null,
+      "monthlyStatus": "no_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "x",
+          "type": "income",
+          "amount": 0.1,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "y",
+          "type": "income",
+          "amount": 0.2,
+          "dateISO": "2026-09-02",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-02",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "x",
+          "type": "income",
+          "amount": 0.1,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "y",
+          "type": "income",
+          "amount": 0.2,
+          "dateISO": "2026-09-02",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-02",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 2,
+      "incomeTransactionCount": 2,
+      "expenseTransactionCount": 0,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": true,
+      "aggregationUnavailableReason": null,
+      "income": 0.3,
+      "incomeAveragePerDay": 0.02,
+      "largestIncome": 0.2,
+      "expenses": 0,
+      "netCashFlow": 0.3,
+      "categoryAggregationAvailable": true,
+      "categoryAggregationUnavailableReason": null,
+      "categorySpending": [],
+      "topSpendingCategory": null,
+      "safeSavingsCapacity": 0,
+      "primaryGoal": null,
+      "monthlyStatus": "no_budget"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "x",
+          "type": "expense",
+          "amount": 1.23456,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "x",
+          "type": "expense",
+          "amount": 1.23456,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 1,
+      "incomeTransactionCount": 0,
+      "expenseTransactionCount": 1,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": false,
+      "aggregationUnavailableReason": "invalid_operand",
+      "income": null,
+      "incomeAveragePerDay": null,
+      "largestIncome": null,
+      "expenses": null,
+      "netCashFlow": null,
+      "categorySpending": [],
+      "topSpendingCategory": null,
+      "categoryAggregationAvailable": false,
+      "categoryAggregationUnavailableReason": "invalid_operand",
+      "safeSavingsCapacity": null,
+      "primaryGoal": null,
+      "monthlyStatus": "unavailable"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "x",
+          "type": "transfer",
+          "amount": 20,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "x",
+          "type": "transfer",
+          "amount": 20,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 1,
+      "incomeTransactionCount": 0,
+      "expenseTransactionCount": 0,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": false,
+      "aggregationUnavailableReason": "invalid_transaction_type",
+      "income": null,
+      "incomeAveragePerDay": null,
+      "largestIncome": null,
+      "expenses": null,
+      "netCashFlow": null,
+      "categorySpending": [],
+      "topSpendingCategory": null,
+      "categoryAggregationAvailable": false,
+      "categoryAggregationUnavailableReason": "invalid_transaction_type",
+      "safeSavingsCapacity": null,
+      "primaryGoal": null,
+      "monthlyStatus": "unavailable"
+    }
+  },
+  {
+    "input": {
+      "transactions": [
+        {
+          "id": "x",
+          "type": "expense",
+          "amount": 900719925474.0991,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "y",
+          "type": "expense",
+          "amount": 0.0001,
+          "dateISO": "2026-09-02",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-02",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "budgets": [],
+      "budgetAdjustments": {},
+      "goals": [],
+      "goalContributionPlans": {},
+      "month": "2026-09",
+      "now": "2026-09-15T12:00:00"
+    },
+    "expected": {
+      "month": "2026-09",
+      "monthTransactions": [
+        {
+          "id": "x",
+          "type": "expense",
+          "amount": 900719925474.0991,
+          "dateISO": "2026-09-01",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-01",
+          "payment": "Cash",
+          "origin": "Manual"
+        },
+        {
+          "id": "y",
+          "type": "expense",
+          "amount": 0.0001,
+          "dateISO": "2026-09-02",
+          "description": "Synthetic",
+          "category": "Food",
+          "categoryColor": "#000",
+          "classification": {
+            "kind": "legacy",
+            "categoryId": null,
+            "categoryNameSnapshot": "Food",
+            "categoryColorSnapshot": "#000",
+            "normalizedCategorySnapshot": "food"
+          },
+          "date": "2026-09-02",
+          "payment": "Cash",
+          "origin": "Manual"
+        }
+      ],
+      "transactionCount": 2,
+      "incomeTransactionCount": 0,
+      "expenseTransactionCount": 2,
+      "plannedBudgetTotal": 0,
+      "budgetSpentTotal": 0,
+      "remainingBudget": 0,
+      "budgetProjection": {
+        "available": true,
+        "unavailableReason": null,
+        "budgetUsage": {
+          "available": false,
+          "hasOverlappingCategories": false,
+          "plannedTotal": null,
+          "spentTotal": null,
+          "percent": null
+        },
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "monthElapsedRatio": 0.5,
+        "monthElapsedPercent": 50,
+        "budgetUsedRatio": null,
+        "budgetUsedPercent": null,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "projectedOverBudget": false,
+        "adjustmentNeeded": 0,
+        "remainingDays": 15,
+        "remainingWeeks": 2.142857142857143,
+        "suggestedWeeklyReduction": 0,
+        "currentRemainingProjectedSpend": 0,
+        "remainingSpendTarget": 0,
+        "canProject": true
+      },
+      "savingsCapacity": {
+        "available": true,
+        "unavailableReason": null,
+        "month": "2026-09",
+        "plannedTotal": 0,
+        "spentTotal": 0,
+        "remainingBudget": 0,
+        "projectedTotal": 0,
+        "projectedDifference": 0,
+        "activeAdjustmentTarget": null,
+        "rawCapacity": 0,
+        "safeMonthlyCapacity": 0,
+        "source": "none",
+        "canContribute": false
+      },
+      "hasTransactions": true,
+      "hasBudgets": false,
+      "hasGoals": false,
+      "goalsAvailable": true,
+      "hasFinancialData": true,
+      "accountBalance": null,
+      "availableToSpend": null,
+      "upcomingBills": [],
+      "aggregationAvailable": false,
+      "aggregationUnavailableReason": "unsafe_aggregate",
+      "income": null,
+      "incomeAveragePerDay": null,
+      "largestIncome": null,
+      "expenses": null,
+      "netCashFlow": null,
+      "categorySpending": [],
+      "topSpendingCategory": null,
+      "categoryAggregationAvailable": false,
+      "categoryAggregationUnavailableReason": "unsafe_aggregate",
+      "safeSavingsCapacity": null,
+      "primaryGoal": null,
+      "monthlyStatus": "unavailable"
+    }
+  }
+]

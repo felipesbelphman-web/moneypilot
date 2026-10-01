@@ -1,3 +1,6 @@
+import { retrieveFinanceCollection, type FinanceCollectionPageRequest, type FinanceCollectionPage } from "./finance-collection-pagination.ts";
+import { requireCompleteCollection } from "./finance-collection-completeness.ts";
+import { validateTransactionDateRange, type CompletePeriodResult, type TransactionDateRange } from "./finance-query-contracts.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Budget, BudgetAdjustment } from "@/components/budgets/budget-model";
 import type { GoalContributionPlan } from "@/components/goals/goal-contribution-plan";
@@ -34,30 +37,57 @@ export class SupabaseFinanceRepository implements FinanceRepository {
     return settleFinanceResourceLoaders({
       accountBalanceSettings: () => this.getAccountBalanceSettings(userId),
       transactions: () => this.loadResource(
-        applyFinanceResourceOrder(this.client.from("transactions").select(transactionProjection).eq("user_id", userId), "transactions"),
+        applyFinanceResourceOrder(this.client.from("transactions").select(transactionProjection, { count: "exact" }).eq("user_id", userId), "transactions"),
         transactionRowToDomain,
       ),
-      budgets: () => this.loadResource(
-        applyFinanceResourceOrder(this.client.from("budgets").select(budgetProjection).eq("user_id", userId), "budgets"),
+      budgets: () => this.loadPagedResource(
+        ({ from, to, count }) => applyFinanceResourceOrder(this.client.from("budgets").select(budgetProjection, { count }).eq("user_id", userId), "budgets").range(from, to),
+        row => row.id,
         budgetRowToDomain,
       ),
-      budgetAdjustments: () => this.loadResource(
-        applyFinanceResourceOrder(this.client.from("budget_adjustments").select(budgetAdjustmentProjection).eq("user_id", userId), "budgetAdjustments"),
+      budgetAdjustments: () => this.loadPagedResource(
+        ({ from, to, count }) => applyFinanceResourceOrder(this.client.from("budget_adjustments").select(budgetAdjustmentProjection, { count }).eq("user_id", userId), "budgetAdjustments").range(from, to),
+        row => row.month,
         budgetAdjustmentRowToDomain,
       ),
-      goals: () => this.loadResource(
-        applyFinanceResourceOrder(this.client.from("goals").select(goalProjection).eq("user_id", userId), "goals"),
+      goals: () => this.loadPagedResource(
+        ({ from, to, count }) => applyFinanceResourceOrder(this.client.from("goals").select(goalProjection, { count }).eq("user_id", userId), "goals").range(from, to),
+        row => row.id,
         goalRowToDomain,
       ),
-      goalContributionPlans: () => this.loadResource(
-        applyFinanceResourceOrder(this.client.from("goal_contribution_plans").select(goalContributionPlanProjection).eq("user_id", userId), "goalContributionPlans"),
+      goalContributionPlans: () => this.loadPagedResource(
+        ({ from, to, count }) => applyFinanceResourceOrder(this.client.from("goal_contribution_plans").select(goalContributionPlanProjection, { count }).eq("user_id", userId), "goalContributionPlans").range(from, to),
+        row => row.goal_id,
         goalContributionPlanRowToDomain,
       ),
-      investments: () => this.loadResource(
-        applyFinanceResourceOrder(this.client.from("investments").select(investmentProjection).eq("user_id", userId), "investments"),
+      investments: () => this.loadPagedResource(
+        ({ from, to, count }) => applyFinanceResourceOrder(this.client.from("investments").select(investmentProjection, { count }).eq("user_id", userId), "investments").range(from, to),
+        row => row.id,
         investmentRowToDomain,
       ),
     });
+  }
+
+  async listTransactionsForPeriod(userId: FinanceUserId, range: TransactionDateRange): Promise<CompletePeriodResult<Transaction>> {
+    // Copy validated strings before the first await; caller mutation cannot shift scope.
+    const scope = validateTransactionDateRange(range);
+    try {
+      const rows = await retrieveFinanceCollection({
+        fetchPage: ({ from, to, count }) => applyFinanceResourceOrder(
+          this.client.from("transactions").select(transactionProjection, { count })
+            .eq("user_id", userId).gte("date_iso", scope.startISO).lt("date_iso", scope.endExclusiveISO),
+          "transactions",
+        ).range(from, to),
+        identity: row => row.id,
+      });
+      const items = rows.map(transactionRowToDomain);
+      if (items.some(item => item.dateISO < scope.startISO || item.dateISO >= scope.endExclusiveISO)) {
+        throw new FinanceError("repository_unavailable", { reason: "incomplete_collection" });
+      }
+      return { completeness: "complete", range: scope, items };
+    } catch (error) {
+      throw mapFinanceRepositoryError(error);
+    }
   }
 
   async getAccountBalanceSettings(userId: FinanceUserId): Promise<AccountBalanceSettings | null> {
@@ -76,13 +106,22 @@ export class SupabaseFinanceRepository implements FinanceRepository {
     return accountBalanceSettingsRowToDomain(requireData(result.data, "Failed to save account balance settings"));
   }
 
+  private async loadPagedResource<Row, Domain>(
+    fetchPage: (request: FinanceCollectionPageRequest) => PromiseLike<FinanceCollectionPage<Row>>,
+    identity: (row: Row) => string,
+    mapper: (row: Row) => Domain,
+  ): Promise<Domain[]> {
+    const rows = await retrieveFinanceCollection({ fetchPage, identity });
+    return rows.map(mapper);
+  }
+
   private async loadResource<Row, Domain>(
-    query: PromiseLike<{ data: Row[] | null; error: SupabaseError }>,
+    query: PromiseLike<{ data: Row[] | null; error: SupabaseError; count: number | null }>,
     mapper: (row: Row) => Domain,
   ): Promise<Domain[]> {
     const result = await query;
     throwIfSupabaseError(result.error, "Failed to load financial resource");
-    return (result.data ?? []).map(mapper);
+    return requireCompleteCollection(result.data, result.count).map(mapper);
   }
 
   async createTransaction(userId: FinanceUserId, transaction: TransactionCreateInput): Promise<Transaction> {

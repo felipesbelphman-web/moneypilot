@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Browser authorization
+
+Do not open, access, or control a browser without the user's explicit permission for the current task. This includes visual validation of localhost pages. Use local files, commands, and tests instead. This user preference is mandatory and is intended to reduce credit usage.

@@ -3,63 +3,83 @@
 import { useCurrency } from "@/components/CurrencyProvider";
 
 import Image from "next/image";
+import { csvImportLabels, getCsvImportCopy } from "@/i18n/csv-import-copy";
+import { getTransactionSelectionState, toggleAllTransactionSelection, toggleTransactionSelection } from "./transaction-selection";
 import { useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { translations } from "@/i18n/translations";
 import type { Transaction } from "@/components/transactions/transaction-model";
 import { formatTransactionCivilDate, localizeTransactionCategory, localizeTransactionOrigin, localizeTransactionPayment } from "@/components/transactions/transaction-presentation";
 
+import type { FinanceResourceStatus } from "@/lib/persistence/finance-resource-status";
+import { transactionAvailabilityCopy } from "./transactions-view-state";
+
 type TransactionsTableProps = {
-  transactions: Transaction[];
+  transactions: Transaction[] | null;
+  selectableTransactions?: Transaction[] | null;
   selectedMonth: string;
   page: number;
   onPageChange: (page: number) => void;
   onEdit: (transaction: Transaction, focusCategory?: boolean) => void;
   onDelete: (transaction: Transaction) => void;
-  totalItems: number;
+  totalItems: number | null;
+  status: FinanceResourceStatus;
   pageSize: number;
 };
 
-const columns = "grid-cols-[minmax(0,2.5fr)_minmax(0,1.5fr)_minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.75fr)_minmax(0,.55fr)]";
+const columns = "grid-cols-[22px_minmax(0,2.5fr)_minmax(0,1.5fr)_minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,.75fr)_minmax(0,.55fr)]";
 const iconRoot = "/moneypilot/transactions/icons";
 
-export function TransactionsTable({ transactions, selectedMonth, page, onPageChange, onEdit, onDelete, totalItems, pageSize }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, selectableTransactions = transactions, selectedMonth, page, onPageChange, onEdit, onDelete, totalItems, pageSize, status }: TransactionsTableProps) {
   const { language } = useLanguage();
   const t = translations[language].appTransactions;
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const labels = csvImportLabels[language];
+  const { reviewCopy } = getCsvImportCopy(language);
+  const [year, monthNumber] = selectedMonth.split("-");
+  const periodLabel = `${translations[language].financialFlow.months[Number(monthNumber) - 1]} ${year}`;
+  if (status.status !== "ready" || transactions === null || selectableTransactions === null || totalItems === null) return (
+    <section data-transactions-table className="grid h-[625px] min-h-[625px] max-h-[625px] min-w-0 max-w-full shrink-0 grid-rows-[22px_minmax(0,1fr)_21.433px] gap-y-[32px] overflow-visible rounded-[16.075px] border border-[var(--border-default)] bg-[var(--background-elevated)] px-[14.289px] py-[9.824px] shadow-[0_3.572px_12.503px_rgba(10,10,10,0.07)] [box-sizing:border-box]">
+      <div className="flex h-[22px] items-start justify-between"><h2 className="text-[18px] font-semibold leading-[22px]">{t.transactionsInPeriod.replace("{period}", periodLabel)}</h2></div>
+      <p role={status.status === "loading" ? "status" : "alert"} className="py-8 text-center text-sm text-[var(--text-secondary)]">{status.status === "loading" ? transactionAvailabilityCopy[language].loading : transactionAvailabilityCopy[language].error}</p>
+    </section>
+  );
+  const selectableIds = selectableTransactions.map(item => item.id);
+  const { allSelected, partiallySelected } = getTransactionSelectionState(selectableIds, selectedIds);
+  const toggleRow = (id: string) => setSelectedIds(current => toggleTransactionSelection(current, id));
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const firstItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const lastItem = Math.min(page * pageSize, totalItems);
-  const [year, monthNumber] = selectedMonth.split("-");
-  const periodLabel = `${translations[language].financialFlow.months[Number(monthNumber) - 1]} ${year}`;
   const resultCopy = (totalItems === 1 ? t.resultCountOne : t.resultCountOther).replace("{count}", String(totalItems));
   const showingCopy = (totalItems === 1 ? t.paginationOne : t.paginationOther).replace("{first}", String(firstItem)).replace("{last}", String(lastItem)).replace("{count}", String(totalItems));
   return (
-    <section className="grid h-[625px] min-h-[625px] max-h-[625px] min-w-0 max-w-full shrink-0 grid-rows-[22px_minmax(0,1fr)_21.433px] gap-y-[32px] overflow-visible rounded-[16.075px] border border-[var(--border-default)] bg-[var(--background-elevated)] px-[14.289px] py-[9.824px] shadow-[0_3.572px_12.503px_rgba(10,10,10,0.07)] [box-sizing:border-box]">
+    <section data-transactions-table className="grid h-[625px] min-h-[625px] max-h-[625px] min-w-0 max-w-full shrink-0 grid-rows-[22px_minmax(0,1fr)_21.433px] gap-y-[32px] overflow-visible rounded-[16.075px] border border-[var(--border-default)] bg-[var(--background-elevated)] px-[14.289px] py-[9.824px] shadow-[0_3.572px_12.503px_rgba(10,10,10,0.07)] [box-sizing:border-box]">
       <div className="flex h-[22px] items-start justify-between">
         <h2 className="text-[18px] font-semibold leading-[22px]">{t.transactionsInPeriod.replace("{period}", periodLabel)}</h2>
         <span className="w-[225px] text-right text-[10.72px] leading-[13px] text-[var(--text-tertiary)]">{resultCopy}</span>
       </div>
       <div className="min-h-0 min-w-0 max-w-full">
         <div className={`grid h-[27.717px] min-w-0 max-w-full ${columns} items-center rounded-[8.931px] bg-[var(--background-subtle)] px-[7.144px] text-[10.72px] font-semibold text-[var(--text-secondary)]`}>
+          <input type="checkbox" aria-label={labels.selectAll} aria-checked={partiallySelected ? "mixed" : allSelected} ref={element => { if (element) element.indeterminate = partiallySelected; }} checked={allSelected} disabled={!selectableTransactions.length} onChange={() => setSelectedIds(current => toggleAllTransactionSelection(selectableIds, current))} />
           {t.columns.map((column, index) => <span key={column} className={`${index > 5 ? "text-center" : ""} min-w-0 truncate`}>{column}</span>)}
         </div>
         <div className="mt-[12px] min-h-[31.257px] min-w-0 max-w-full overflow-visible">
-          {transactions.map((item, index) => <TransactionRow key={item.id} item={item} last={index === transactions.length - 1} menuAbove={index >= 5} menuOpen={openMenuId === item.id} onToggleMenu={() => setOpenMenuId((current) => current === item.id ? null : item.id)} onEdit={(focusCategory) => { setOpenMenuId(null); onEdit(item, focusCategory); }} onDelete={() => { setOpenMenuId(null); onDelete(item); }} />)}
+          {transactions.map((item, index) => <TransactionRow key={item.id} item={item} selected={selectedIds.has(item.id)} selectionLabel={reviewCopy.selected} onSelect={() => toggleRow(item.id)} last={index === transactions.length - 1} menuAbove={index >= 5} menuOpen={openMenuId === item.id} onToggleMenu={() => setOpenMenuId((current) => current === item.id ? null : item.id)} onEdit={(focusCategory) => { setOpenMenuId(null); onEdit(item, focusCategory); }} onDelete={() => { setOpenMenuId(null); onDelete(item); }} />)}
           {transactions.length === 0 && <div className="flex h-[31.257px] items-center justify-center text-[10.72px] text-[var(--text-tertiary)]">{t.noTransactionsInPeriod.replace("{period}", periodLabel)}</div>}
         </div>
       </div>
       <div className="mx-auto flex h-[21.433px] w-[82.78%] min-w-0 max-w-full items-center justify-between">
         <span className="text-[7.591px] text-[var(--text-tertiary)]">{showingCopy}</span>
         <div className="flex gap-[5.358px]">
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <button key={number} type="button" onClick={() => onPageChange(number)} className={`size-[21.433px] rounded-[6.252px] text-[7.591px] font-semibold ${page === number ? "bg-[var(--dashboard-brand-primary)] text-white" : "border border-[var(--border-default)] bg-[var(--background-subtle)] text-[var(--text-secondary)]"}`}>{number}</button>)}
+          {Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <button key={number} type="button" aria-current={page === number ? "page" : undefined} onClick={() => onPageChange(number)} className={`size-[21.433px] rounded-[6.252px] text-[7.591px] font-semibold ${page === number ? "bg-[var(--dashboard-brand-primary)] text-white" : "border border-[var(--border-default)] bg-[var(--background-subtle)] text-[var(--text-secondary)]"}`}>{number}</button>)}
         </div>
       </div>
     </section>
   );
 }
 
-function TransactionRow({ item, last, menuAbove, menuOpen, onToggleMenu, onEdit, onDelete }: { item: Transaction; last: boolean; menuAbove: boolean; menuOpen: boolean; onToggleMenu: () => void; onEdit: (focusCategory?: boolean) => void; onDelete: () => void }) {
+function TransactionRow({ item, selected, selectionLabel, onSelect, last, menuAbove, menuOpen, onToggleMenu, onEdit, onDelete }: { item: Transaction; selected: boolean; selectionLabel: string; onSelect: () => void; last: boolean; menuAbove: boolean; menuOpen: boolean; onToggleMenu: () => void; onEdit: (focusCategory?: boolean) => void; onDelete: () => void }) {
   const { language } = useLanguage();
   const { formatMoney: money } = useCurrency();
   const t = translations[language].appTransactions;
@@ -77,7 +97,8 @@ function TransactionRow({ item, last, menuAbove, menuOpen, onToggleMenu, onEdit,
       : language === "it" ? { edit: "Modifica transazione", reclassify: "Riclassifica" }
       : { edit: "Edit transaction", reclassify: "Reclassify" };
   return (
-    <div className={`grid ${last ? "h-[31.257px]" : "relative h-[56.15px] after:absolute after:left-0 after:right-0 after:top-[43.257px] after:h-[0.893px] after:bg-[var(--border-default)]"} ${columns} items-start px-[7.144px] pt-[8px] text-[10.72px]`}>
+    <div data-transaction-row className={`grid ${last ? "h-[31.257px]" : "relative h-[56.15px] after:absolute after:left-0 after:right-0 after:top-[43.257px] after:h-[0.893px] after:bg-[var(--border-default)]"} ${columns} items-start px-[7.144px] pt-[8px] text-[10.72px]`}>
+      <input type="checkbox" aria-label={`${selectionLabel}: ${item.description}`} checked={selected} onChange={onSelect} />
       <strong className="min-w-0 truncate text-[10.72px] font-semibold">{item.description}</strong>
       <span className="flex min-w-0 items-center gap-[7.144px] truncate text-[var(--text-secondary)]"><i className="size-[4.465px] shrink-0 rounded-full" style={item.categoryColor === null ? undefined : { background: item.categoryColor }} />{categoryLabel}</span>
       <span className="flex min-w-0 items-center gap-[7.144px] truncate text-[var(--text-secondary)]"><Image src={`${iconRoot}/card-outline.svg`} alt="" width={13} height={13} className="size-[12.503px] shrink-0" />{paymentLabel}</span>

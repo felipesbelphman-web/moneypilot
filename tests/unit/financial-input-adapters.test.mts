@@ -30,7 +30,7 @@ test("valid CSV rows become validated transaction drafts", () => {
 });
 test("invalid CSV rows cannot become persistible or leak their contents", () => {
   let writes = 0;
-  for (const amount of ["", "1.234,56", "1,234.56", "12x", "1e2", "1.23456"]) {
+  for (const amount of ["", "1.234,56", "1,234.56", "12x", "1e2", "1.23456", "1.00000000000000001", "900719925474.09911", "900719925474.0904", `0.${"0".repeat(400)}1`]) {
     const [draft] = parseTransactionCsv(`date;description;amount;type\n2026-09-10;Private description;${amount};expense`);
     const errors = validateImportedDraft(draft); if (errors.length === 0) writes += 1;
     assert.ok(errors.includes("Valor inválido")); if (amount) assert.equal(errors.join(" ").includes(amount), false);
@@ -41,4 +41,15 @@ test("invalid CSV rows cannot become persistible or leak their contents", () => 
 test("signed CSV values preserve inferred type without rounding", () => {
   const [draft] = parseTransactionCsv("date;description;amount\n2026-09-10;Refund;-12,50");
   assert.equal(draft.type, "expense"); assert.equal(draft.amount, 12.5);
+});
+
+test("all financial input adapters reject precision lost by Number without substituting zero", () => {
+  const moneyParsers = [parseTransactionAmountText, parseBudgetLimitText, parseGoalTargetAmountText, parseGoalSavedAmountText, parseCsvEditableAmountText, parseImportedAmount];
+  const investmentParsers = [parseInvestmentQuantityInput, parseInvestmentAveragePriceInput, parseInvestmentManualPriceInput];
+  for (const parse of [...moneyParsers, ...investmentParsers]) {
+    for (const text of ["1.00000000000000001", "900719925474.0904", `0.${"0".repeat(400)}1`]) assert.equal(parse(text), null);
+    assert.equal(parse(" 0001,23000 "), 1.23);
+  }
+  for (const parse of moneyParsers) assert.equal(parse("900719925474.09911"), null);
+  for (const parse of investmentParsers) assert.equal(parse("9007199254740991.1"), null);
 });

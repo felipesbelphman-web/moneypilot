@@ -2,6 +2,7 @@ import type { Transaction } from "@/components/transactions/transaction-model";
 import { civilDateToUtcTimestamp } from "../dates/civil-date.ts";
 import { FinanceError } from "./finance-error.ts";
 import { validateMoney } from "./decimal-guard.ts";
+import { aggregateMoney } from "./money-aggregation.ts";
 
 export type AccountBalanceSettings = {
   openingBalance: number;
@@ -32,18 +33,23 @@ export function calculateCurrentBalance(
   transactions: readonly Transaction[],
 ): number | null {
   if (settings === null) return null;
-  const normalized = validateAndNormalizeAccountBalanceSettings(settings);
+  try {
+    const normalized = validateAndNormalizeAccountBalanceSettings(settings);
+    const operands = [normalized.openingBalance];
+    for (const transaction of transactions) {
+      if (transaction.dateISO < normalized.openingDate) continue;
+      if (transaction.type !== "income" && transaction.type !== "expense") return null;
+      validateMoney(transaction.amount, "amount", "positive");
+      operands.push(transaction.type === "income" ? transaction.amount : -transaction.amount);
+    }
 
-  const balance = transactions.reduce((currentBalance, transaction) => {
-    if (transaction.dateISO < normalized.openingDate) return currentBalance;
-    return transaction.type === "income"
-      ? currentBalance + transaction.amount
-      : currentBalance - transaction.amount;
-  }, normalized.openingBalance);
-
-  // Monetary calculation boundaries follow the database numeric(18,4) scale.
-  // Inputs remain untouched so intermediate per-item rounding cannot accumulate.
-  return Math.round(balance * 10_000) / 10_000;
+    const balance = aggregateMoney(operands);
+    // Preserve the public unavailable state for invalid operands or unsafe totals.
+    return balance.available ? balance.value : null;
+  } catch (error) {
+    if (error instanceof FinanceError) return null;
+    throw error;
+  }
 }
 
 export function calculateCompleteCurrentBalance(

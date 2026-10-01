@@ -100,7 +100,7 @@ export function getDashboardTransactionAmount(transaction: Transaction) {
   return transaction.amount;
 }
 
-export function calculateDashboardFinancialSummary({ transactions, budgets, budgetAdjustments, goals, goalContributionPlans, month, now = new Date() }: DashboardFinancialSummaryInput): DashboardFinancialSummary {
+export function calculateDashboardTransactionSummary({ transactions, month, now = new Date() }: Pick<DashboardFinancialSummaryInput, "transactions" | "month" | "now">) {
   const monthTransactions = getDashboardMonthTransactions(transactions, month);
   const hasInvalidTransactionType = monthTransactions.some((transaction) => !isFinancialTransactionType(transaction.type));
   const incomeTransactions = monthTransactions.filter((transaction) => transaction.type === "income");
@@ -110,55 +110,24 @@ export function calculateDashboardFinancialSummary({ transactions, budgets, budg
   const netResult = incomeResult.available && expenseResult.available
     ? aggregateMoney([incomeResult.value, -expenseResult.value])
     : unavailableFrom(incomeResult, expenseResult);
-  const budgetProjection = calculateBudgetProjection({ budgets, transactions, month, now });
-  const savingsCapacity = calculateGoalSavingsCapacity({ budgets, transactions, month, adjustment: budgetAdjustments[month], now });
-  const primaryGoal = selectPrimaryGoal(goals);
-  const primaryGoalSummary = primaryGoal ? createGoalSummary(primaryGoal, goalContributionPlans[primaryGoal.id], savingsCapacity.available ? savingsCapacity.safeMonthlyCapacity : null, now) : null;
-  const hasTransactions = monthTransactions.length > 0;
-  const hasBudgets = budgets.some((budget) => budget.month === month);
-  const hasGoals = goals.length > 0;
-  const common = {
-    month,
-    monthTransactions,
-    transactionCount: monthTransactions.length,
-    incomeTransactionCount: incomeTransactions.length,
-    expenseTransactionCount: expenseTransactions.length,
-    plannedBudgetTotal: budgetProjection.available ? budgetProjection.plannedTotal : null,
-    budgetSpentTotal: budgetProjection.available ? budgetProjection.spentTotal : null,
-    remainingBudget: budgetProjection.available ? budgetProjection.remainingBudget : null,
-    budgetProjection,
-    savingsCapacity,
-    hasTransactions,
-    hasBudgets,
-    hasGoals,
-    goalsAvailable: !primaryGoal || primaryGoalSummary !== null,
-    hasFinancialData:
-    transactions.length > 0 || budgets.length > 0 || goals.length > 0,
-    accountBalance: null,
-    availableToSpend: null,
-    upcomingBills: [] as [],
-  };
-
+  const common = { month, monthTransactions, transactionCount: monthTransactions.length, incomeTransactionCount: incomeTransactions.length, expenseTransactionCount: expenseTransactions.length, hasTransactions: monthTransactions.length > 0 };
   if (hasInvalidTransactionType || !incomeResult.available || !expenseResult.available || !netResult.available) {
     const failure = !incomeResult.available ? incomeResult : !expenseResult.available ? expenseResult : netResult;
     const reason = hasInvalidTransactionType ? "invalid_transaction_type" : failure.available ? "unsafe_aggregate" : failure.reason;
     return {
       ...common,
-      aggregationAvailable: false,
+      aggregationAvailable: false as const,
       aggregationUnavailableReason: reason,
       income: null,
       incomeAveragePerDay: null,
       largestIncome: null,
       expenses: null,
       netCashFlow: null,
-      categorySpending: [],
+      categorySpending: [] as [],
       topSpendingCategory: null,
-      categoryAggregationAvailable: false,
+      categoryAggregationAvailable: false as const,
       categoryAggregationUnavailableReason: reason,
-      safeSavingsCapacity: null,
-      primaryGoal: primaryGoalSummary,
-      monthlyStatus: "unavailable",
-    };
+    } as const;
   }
 
   const incomeAveragePerDay = calculateIncomeAveragePerDay(incomeTransactions, month, now);
@@ -177,7 +146,7 @@ export function calculateDashboardFinancialSummary({ transactions, budgets, budg
       : { categoryAggregationAvailable: true, categoryAggregationUnavailableReason: null, categorySpending: categoryResult?.value ?? [], topSpendingCategory: categoryResult?.value[0] ?? null };
   return {
     ...common,
-    aggregationAvailable: true,
+    aggregationAvailable: true as const,
     aggregationUnavailableReason: null,
     income: incomeResult.value,
     incomeAveragePerDay,
@@ -185,10 +154,42 @@ export function calculateDashboardFinancialSummary({ transactions, budgets, budg
     expenses: expenseResult.value,
     netCashFlow: netResult.value,
     ...categoryAggregation,
-    safeSavingsCapacity: savingsCapacity.available ? savingsCapacity.safeMonthlyCapacity : null,
-    primaryGoal: primaryGoalSummary,
-    monthlyStatus: !budgetProjection.available ? "unavailable" : budgetProjection.plannedTotal <= 0 ? "no_budget" : budgetProjection.projectedOverBudget ? "over_budget" : "within_budget",
   };
+}
+
+export function calculateDashboardFinancialSummary({ transactions, budgets, budgetAdjustments, goals, goalContributionPlans, month, now = new Date() }: DashboardFinancialSummaryInput): DashboardFinancialSummary {
+  const metrics = calculateDashboardTransactionSummary({ transactions, month, now });
+  const budgetProjection = calculateBudgetProjection({ budgets, transactions, month, now });
+  const savingsCapacity = calculateGoalSavingsCapacity({ budgets, transactions, month, adjustment: budgetAdjustments[month], now });
+  const primaryGoal = selectPrimaryGoal(goals);
+  const primaryGoalSummary = primaryGoal ? createGoalSummary(primaryGoal, goalContributionPlans[primaryGoal.id], savingsCapacity.available ? savingsCapacity.safeMonthlyCapacity : null, now) : null;
+  const hasTransactions = metrics.hasTransactions;
+  const hasBudgets = budgets.some((budget) => budget.month === month);
+  const hasGoals = goals.length > 0;
+  const common = {
+    month,
+    monthTransactions: metrics.monthTransactions,
+    transactionCount: metrics.transactionCount,
+    incomeTransactionCount: metrics.incomeTransactionCount,
+    expenseTransactionCount: metrics.expenseTransactionCount,
+    plannedBudgetTotal: budgetProjection.available ? budgetProjection.plannedTotal : null,
+    budgetSpentTotal: budgetProjection.available ? budgetProjection.spentTotal : null,
+    remainingBudget: budgetProjection.available ? budgetProjection.remainingBudget : null,
+    budgetProjection,
+    savingsCapacity,
+    hasTransactions,
+    hasBudgets,
+    hasGoals,
+    goalsAvailable: !primaryGoal || primaryGoalSummary !== null,
+    hasFinancialData:
+    transactions.length > 0 || budgets.length > 0 || goals.length > 0,
+    accountBalance: null,
+    availableToSpend: null,
+    upcomingBills: [] as [],
+  };
+
+  if (!metrics.aggregationAvailable) return { ...metrics, ...common, safeSavingsCapacity: null, primaryGoal: primaryGoalSummary, monthlyStatus: "unavailable" };
+  return { ...metrics, ...common, safeSavingsCapacity: savingsCapacity.available ? savingsCapacity.safeMonthlyCapacity : null, primaryGoal: primaryGoalSummary, monthlyStatus: !budgetProjection.available ? "unavailable" : budgetProjection.plannedTotal <= 0 ? "no_budget" : budgetProjection.projectedOverBudget ? "over_budget" : "within_budget" };
 }
 
 function aggregateTransactionAmounts(transactions: Transaction[]) {
@@ -234,7 +235,7 @@ function unavailableFrom(...results: MoneyAggregationResult[]): MoneyAggregation
   return { available: false, reason: failure && !failure.available ? failure.reason : "unsafe_aggregate" };
 }
 
-function createGoalSummary(goal: Goal, contributionPlan: GoalContributionPlan | undefined, safeSavingsCapacity: number | null, now: Date): DashboardGoalSummary | null {
+export function createGoalSummary(goal: Goal, contributionPlan: GoalContributionPlan | undefined, safeSavingsCapacity: number | null, now: Date): DashboardGoalSummary | null {
   const calculation = calculateGoal(goal, now);
   if (!calculation.available) return null;
   return {
